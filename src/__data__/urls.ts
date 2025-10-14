@@ -9,7 +9,25 @@ const makeUrl = (url) => baseUrl + url
 export const URLs = {
   baseUrl,
   auth: {
-    url: makeUrl(navs[`link.${pkg.name}.auth`]),
-    isOn: Boolean(navs[`link.${pkg.name}.auth`])
+    login: {
+      url: makeUrl(navs[`link.${pkg.name}.auth.login`]),
+      isOn: Boolean(navs[`link.${pkg.name}.auth.login`])
+    },
+    register: {
+      url: makeUrl(navs[`link.${pkg.name}.auth.register`]),
+      isOn: Boolean(navs[`link.${pkg.name}.auth.register`])
+    }
   },
+  dashboard: {
+    url: makeUrl(navs[`link.${pkg.name}.dashboard`]),
+    isOn: Boolean(navs[`link.${pkg.name}.dashboard`])
+  },
+  company: {
+    url: makeUrl(navs[`link.${pkg.name}.company`]),
+    isOn: Boolean(navs[`link.${pkg.name}.company`])
+  },
+  search: {
+    url: makeUrl(navs[`link.${pkg.name}.search`]),
+    isOn: Boolean(navs[`link.${pkg.name}.search`])
+  }
 }
