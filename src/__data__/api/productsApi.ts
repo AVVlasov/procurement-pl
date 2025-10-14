@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { URLs } from '../urls'
 
 export interface Product {
   id: string;
@@ -34,7 +35,7 @@ export interface UploadFileRequest {
 
 export const productsApi = createApi({
   reducerPath: 'productsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/products' }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/products` }),
   tagTypes: ['Product', 'ProductFile'],
   endpoints: (builder) => ({
     getProducts: builder.query<Product[], void>({

@@ -1,13 +1,15 @@
-import { getNavigation, getNavigationValue } from '@brojs/cli'
+import { getNavigation, getNavigationValue, getConfigValue } from '@brojs/cli'
 
 import pkg from '../../package.json'
 
 const baseUrl = getNavigationValue(`${pkg.name}.main`)
 const navs = getNavigation()
 const makeUrl = (url) => baseUrl + url
+const apiUrl = getConfigValue(`${pkg.name}.api`)
 
 export const URLs = {
   baseUrl,
+  apiUrl,
   auth: {
     login: {
       url: makeUrl(navs[`link.${pkg.name}.auth.login`]),

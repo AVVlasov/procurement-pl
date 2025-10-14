@@ -1,4 +1,5 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
+import { URLs } from '../urls'
 
 export interface Company {
   id: string;
@@ -37,7 +38,7 @@ export interface CompanyStats {
 
 export const companiesApi = createApi({
   reducerPath: 'companiesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/companies' }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/companies` }),
   tagTypes: ['Company', 'Stats'],
   endpoints: (builder) => ({
     getCompany: builder.query<Company, string>({

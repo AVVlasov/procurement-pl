@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { Company } from './companiesApi'
+import { URLs } from '../urls'
 
 export interface SearchParams {
   query?: string;
@@ -39,7 +40,7 @@ export interface AISearchRequest {
 
 export const searchApi = createApi({
   reducerPath: 'searchApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api/search' }),
+  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/search` }),
   tagTypes: ['Search', 'SavedSearch', 'History'],
   endpoints: (builder) => ({
     searchCompanies: builder.query<SearchResult, SearchParams>({
