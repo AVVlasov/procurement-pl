@@ -9,8 +9,12 @@ module.exports = {
   },
   /* use https://admin.bro-js.ru/ to create config, navigations and features */
   navigations: {
-    'procurement-pl.main': '/procurement-pl',
-    'link.procurement-pl.auth': '/auth'
+    'procurement-pl.main': '/',
+    'procurement-pl.auth.login': '/auth/login',
+    'procurement-pl.auth.register': '/auth/register',
+    'procurement-pl.dashboard': '/dashboard',
+    'procurement-pl.company': '/company/:id',
+    'procurement-pl.search': '/search'
   },
   features: {
     'procurement-pl': {

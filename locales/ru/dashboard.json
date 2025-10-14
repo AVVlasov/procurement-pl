@@ -1,0 +1,31 @@
+{
+  "title": "Дашборд",
+  "welcome": "Добро пожаловать, {{name}}!",
+  "stats": {
+    "profile_views": "Просмотры профиля",
+    "sent_requests": "Отправленные запросы",
+    "received_requests": "Полученные запросы",
+    "new_messages": "Новые сообщения",
+    "rating": "Рейтинг компании"
+  },
+  "ai_recommendations": {
+    "title": "AI Рекомендации партнеров",
+    "loading": "Загрузка рекомендаций...",
+    "no_recommendations": "Пока нет рекомендаций",
+    "view_details": "Подробнее",
+    "contact": "Связаться",
+    "reason": "Рекомендовано потому что:"
+  },
+  "recent_activity": {
+    "title": "Последняя активность",
+    "no_activity": "Нет активности"
+  },
+  "quick_actions": {
+    "title": "Быстрые действия",
+    "search_partners": "Найти партнеров",
+    "create_request": "Создать запрос",
+    "update_profile": "Обновить профиль",
+    "view_messages": "Просмотр сообщений"
+  }
+}
+

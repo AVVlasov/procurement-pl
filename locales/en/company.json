@@ -1,0 +1,65 @@
+{
+  "tabs": {
+    "about": "About",
+    "specialization": "Specialization",
+    "legal": "Legal Info",
+    "reviews": "Reviews"
+  },
+  "about": {
+    "title": "About Company",
+    "logo": "Logo",
+    "full_name": "Full name",
+    "short_name": "Short name",
+    "slogan": "Slogan",
+    "inn": "TIN",
+    "ogrn": "OGRN",
+    "founded_year": "Founded year",
+    "website": "Website",
+    "phone": "Phone",
+    "email": "Email",
+    "employee_count": "Employee count",
+    "revenue": "Annual revenue",
+    "verified": "Verified",
+    "edit_mode": "Edit mode",
+    "view_mode": "View mode"
+  },
+  "specialization": {
+    "title": "Specialization and Services",
+    "sell_section": "I Sell",
+    "buy_section": "I Buy",
+    "add_product": "Add Product/Service",
+    "product_name": "Name",
+    "category": "Category",
+    "description": "Description",
+    "product_url": "Product URL",
+    "files": "Files",
+    "upload_file": "Upload File",
+    "file_types": {
+      "commercial_offer": "Commercial Offer",
+      "technical_specs": "Technical Specifications",
+      "contract": "Contract Draft",
+      "other": "Other"
+    },
+    "no_products": "No products/services added"
+  },
+  "legal": {
+    "title": "Legal Information",
+    "legal_address": "Legal address",
+    "actual_address": "Actual address",
+    "bank_details": "Bank details",
+    "bank_details_hidden": "Details are hidden",
+    "request_access": "Request access to details",
+    "legal_contact": "Legal contact person"
+  },
+  "reviews": {
+    "title": "Reviews",
+    "rating": "Rating",
+    "write_review": "Write Review",
+    "no_reviews": "No reviews yet",
+    "verified_partners_only": "Only verified partners can leave reviews",
+    "your_rating": "Your rating",
+    "your_review": "Your review",
+    "submit": "Submit Review"
+  }
+}
+

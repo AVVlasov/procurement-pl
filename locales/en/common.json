@@ -1,0 +1,64 @@
+{
+  "app_name": "B2B Platform",
+  "buttons": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "reset": "Reset",
+    "upload": "Upload",
+    "download": "Download",
+    "view": "View",
+    "contact": "Contact",
+    "add": "Add"
+  },
+  "labels": {
+    "required": "Required",
+    "optional": "Optional",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "no_data": "No data",
+    "select": "Select...",
+    "all": "All"
+  },
+  "errors": {
+    "required_field": "This field is required",
+    "invalid_email": "Invalid email address",
+    "invalid_phone": "Invalid phone number",
+    "invalid_url": "Invalid URL",
+    "min_length": "Minimum length: {{count}} characters",
+    "max_length": "Maximum length: {{count}} characters",
+    "password_mismatch": "Passwords do not match",
+    "network_error": "Network error. Check your internet connection",
+    "server_error": "Server error. Please try again later",
+    "unauthorized": "Authorization required"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "search": "Search",
+    "company": "Company",
+    "messages": "Messages",
+    "requests": "Requests",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "search": "Find Partners",
+    "profile": "Company Profile",
+    "messages": "Messages",
+    "requests": "Requests",
+    "settings": "Settings",
+    "logout": "Logout",
+    "open_menu": "Open menu",
+    "change_language": "Change language"
+  }
+}
+

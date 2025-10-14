@@ -1,0 +1,31 @@
+{
+  "title": "Dashboard",
+  "welcome": "Welcome, {{name}}!",
+  "stats": {
+    "profile_views": "Profile Views",
+    "sent_requests": "Sent Requests",
+    "received_requests": "Received Requests",
+    "new_messages": "New Messages",
+    "rating": "Company Rating"
+  },
+  "ai_recommendations": {
+    "title": "AI Partner Recommendations",
+    "loading": "Loading recommendations...",
+    "no_recommendations": "No recommendations yet",
+    "view_details": "View Details",
+    "contact": "Contact",
+    "reason": "Recommended because:"
+  },
+  "recent_activity": {
+    "title": "Recent Activity",
+    "no_activity": "No activity"
+  },
+  "quick_actions": {
+    "title": "Quick Actions",
+    "search_partners": "Find Partners",
+    "create_request": "Create Request",
+    "update_profile": "Update Profile",
+    "view_messages": "View Messages"
+  }
+}
+

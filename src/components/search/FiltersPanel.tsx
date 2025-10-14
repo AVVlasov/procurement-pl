@@ -1,0 +1,170 @@
+import React from 'react'
+import {
+  Box,
+  VStack,
+  HStack,
+  Heading,
+  Button,
+  Checkbox,
+  Slider,
+  Text,
+  useDisclosure,
+} from '@chakra-ui/react'
+import { useTranslation } from 'react-i18next'
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
+import { INDUSTRIES, COMPANY_SIZES, GEOGRAPHY_OPTIONS } from '../../utils/constants'
+import type { SearchParams } from '../../__data__/api/searchApi'
+import { colors } from '../../utils/colorMode'
+
+interface FiltersPanelProps {
+  filters: SearchParams
+  onChange: (filters: SearchParams) => void
+  onReset: () => void
+}
+
+export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) => {
+  const { t } = useTranslation('search')
+  const bg = colors.bg.primary
+  const borderColor = colors.border.primary
+
+  const industryDisclosure = useDisclosure({ defaultIsOpen: true })
+  const sizeDisclosure = useDisclosure({ defaultIsOpen: true })
+  const geoDisclosure = useDisclosure({ defaultIsOpen: false })
+  const ratingDisclosure = useDisclosure({ defaultIsOpen: false })
+
+  const FilterSection = ({
+    title,
+    disclosure,
+    children,
+  }: {
+    title: string
+    disclosure: ReturnType<typeof useDisclosure>
+    children: React.ReactNode
+  }) => (
+    <Box>
+      <Button
+        w="full"
+        justifyContent="space-between"
+        onClick={disclosure.onToggle}
+        variant="ghost"
+        fontWeight="bold"
+      >
+        {title}
+        {disclosure.open ? <FiChevronUp /> : <FiChevronDown />}
+      </Button>
+      {disclosure.open && (
+        <Box pt={3} pb={4}>
+          {children}
+        </Box>
+      )}
+    </Box>
+  )
+
+  return (
+    <Box
+      bg={bg}
+      p={4}
+      borderRadius="lg"
+      borderWidth="1px"
+      borderColor={borderColor}
+      shadow="sm"
+    >
+      <VStack gap={4} align="stretch">
+        <HStack justify="space-between">
+          <Heading size="md">{t('filters.title')}</Heading>
+          <Button size="sm" variant="ghost" colorPalette="brand" onClick={onReset}>
+            {t('filters.reset')}
+          </Button>
+        </HStack>
+
+        {/* Industry Filter */}
+        <FilterSection title={t('filters.industry')} disclosure={industryDisclosure}>
+          <Checkbox.Group
+            value={filters.industries || []}
+            onChange={(details) =>
+              onChange({ ...filters, industries: details.value as string[] })
+            }
+          >
+            <VStack gap={2} align="stretch">
+              {INDUSTRIES.slice(0, 8).map((industry) => (
+                <Checkbox.Root key={industry.value} value={industry.value}>
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>{industry.label}</Checkbox.Label>
+                </Checkbox.Root>
+              ))}
+            </VStack>
+          </Checkbox.Group>
+        </FilterSection>
+
+        {/* Company Size Filter */}
+        <FilterSection title={t('filters.company_size')} disclosure={sizeDisclosure}>
+          <Checkbox.Group
+            value={filters.companySize || []}
+            onChange={(details) =>
+              onChange({ ...filters, companySize: details.value as string[] })
+            }
+          >
+            <VStack gap={2} align="stretch">
+              {COMPANY_SIZES.map((size) => (
+                <Checkbox.Root key={size.value} value={size.value}>
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>{size.label}</Checkbox.Label>
+                </Checkbox.Root>
+              ))}
+            </VStack>
+          </Checkbox.Group>
+        </FilterSection>
+
+        {/* Geography Filter */}
+        <FilterSection title={t('filters.geography')} disclosure={geoDisclosure}>
+          <Checkbox.Group
+            value={filters.geography || []}
+            onChange={(details) =>
+              onChange({ ...filters, geography: details.value as string[] })
+            }
+          >
+            <VStack gap={2} align="stretch">
+              {GEOGRAPHY_OPTIONS.slice(0, 8).map((geo) => (
+                <Checkbox.Root key={geo.value} value={geo.value}>
+                  <Checkbox.HiddenInput />
+                  <Checkbox.Control />
+                  <Checkbox.Label>{geo.label}</Checkbox.Label>
+                </Checkbox.Root>
+              ))}
+            </VStack>
+          </Checkbox.Group>
+        </FilterSection>
+
+        {/* Rating Filter */}
+        <FilterSection title={t('filters.rating')} disclosure={ratingDisclosure}>
+          <VStack gap={4} align="stretch">
+            <Text fontSize="sm" color="gray.600">
+              {t('filters.min_rating')}: {filters.minRating || 0}
+            </Text>
+            <Slider.Root
+              value={[filters.minRating || 0]}
+              onChange={(details) => onChange({ ...filters, minRating: details.value[0] })}
+              min={0}
+              max={5}
+              step={0.5}
+              colorPalette="brand"
+            >
+              <Slider.Control>
+                <Slider.Track>
+                  <Slider.Range />
+                </Slider.Track>
+                <Slider.Thumb index={0} />
+              </Slider.Control>
+            </Slider.Root>
+          </VStack>
+        </FilterSection>
+
+        <Button colorPalette="brand" w="full" size="lg">
+          {t('filters.apply')}
+        </Button>
+      </VStack>
+    </Box>
+  )
+}

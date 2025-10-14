@@ -1,0 +1,65 @@
+{
+  "tabs": {
+    "about": "О компании",
+    "specialization": "Специализация",
+    "legal": "Реквизиты",
+    "reviews": "Отзывы"
+  },
+  "about": {
+    "title": "О компании",
+    "logo": "Логотип",
+    "full_name": "Полное наименование",
+    "short_name": "Сокращенное наименование",
+    "slogan": "Слоган",
+    "inn": "ИНН",
+    "ogrn": "ОГРН",
+    "founded_year": "Год основания",
+    "website": "Сайт",
+    "phone": "Телефон",
+    "email": "Email",
+    "employee_count": "Количество сотрудников",
+    "revenue": "Среднегодовая выручка",
+    "verified": "Верифицирована",
+    "edit_mode": "Режим редактирования",
+    "view_mode": "Режим просмотра"
+  },
+  "specialization": {
+    "title": "Специализация и услуги",
+    "sell_section": "Я продаю",
+    "buy_section": "Я покупаю",
+    "add_product": "Добавить продукт/услугу",
+    "product_name": "Название",
+    "category": "Категория",
+    "description": "Описание",
+    "product_url": "Ссылка на продукт",
+    "files": "Файлы",
+    "upload_file": "Загрузить файл",
+    "file_types": {
+      "commercial_offer": "Коммерческое предложение",
+      "technical_specs": "Техническое задание",
+      "contract": "Проект договора",
+      "other": "Другое"
+    },
+    "no_products": "Нет добавленных продуктов/услуг"
+  },
+  "legal": {
+    "title": "Реквизиты и юридическая информация",
+    "legal_address": "Юридический адрес",
+    "actual_address": "Фактический адрес",
+    "bank_details": "Банковские реквизиты",
+    "bank_details_hidden": "Реквизиты скрыты",
+    "request_access": "Запросить доступ к реквизитам",
+    "legal_contact": "Контактное лицо для юридических вопросов"
+  },
+  "reviews": {
+    "title": "Отзывы",
+    "rating": "Рейтинг",
+    "write_review": "Написать отзыв",
+    "no_reviews": "Пока нет отзывов",
+    "verified_partners_only": "Только верифицированные партнеры могут оставлять отзывы",
+    "your_rating": "Ваша оценка",
+    "your_review": "Ваш отзыв",
+    "submit": "Отправить отзыв"
+  }
+}
+

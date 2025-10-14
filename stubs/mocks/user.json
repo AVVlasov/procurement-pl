@@ -1,0 +1,13 @@
+{
+  "mockUser": {
+    "id": "user-123",
+    "email": "test@company.com",
+    "firstName": "Иван",
+    "lastName": "Петров",
+    "position": "Генеральный директор"
+  },
+  "mockTokens": {
+    "accessToken": "mock-access-token-{{timestamp}}",
+    "refreshToken": "mock-refresh-token-{{timestamp}}"
+  }
+}

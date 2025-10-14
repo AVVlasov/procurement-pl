@@ -1,0 +1,49 @@
+{
+  "title": "Partner Search",
+  "search_bar": {
+    "placeholder": "Search companies, products, services...",
+    "ai_mode": "AI Search",
+    "simple_mode": "Simple Search",
+    "suggestions": "Suggestions"
+  },
+  "filters": {
+    "title": "Filters",
+    "industry": "Industry",
+    "company_size": "Company Size",
+    "geography": "Geography",
+    "rating": "Rating",
+    "min_rating": "Minimum rating",
+    "reset": "Reset all",
+    "apply": "Apply"
+  },
+  "sort": {
+    "label": "Sort by",
+    "relevance": "Relevance",
+    "rating": "Rating",
+    "name": "Name",
+    "asc": "Ascending",
+    "desc": "Descending"
+  },
+  "results": {
+    "title": "Search Results",
+    "found": "Companies found: {{count}}",
+    "no_results": "No results found",
+    "loading": "Searching...",
+    "view_details": "View Details",
+    "contact": "Contact",
+    "add_to_favorites": "Add to Favorites",
+    "remove_from_favorites": "Remove from Favorites"
+  },
+  "saved_searches": {
+    "title": "Saved Searches",
+    "save": "Save Search",
+    "name": "Search name",
+    "no_saved": "No saved searches"
+  },
+  "history": {
+    "title": "Search History",
+    "clear": "Clear history",
+    "no_history": "History is empty"
+  }
+}
+
