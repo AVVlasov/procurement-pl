@@ -8,6 +8,8 @@ export interface SearchParams {
   companySize?: string[];
   geography?: string[];
   minRating?: number;
+  hasReviews?: boolean;
+  hasAcceptedDocs?: boolean;
   type?: 'sell' | 'buy';
   page?: number;
   limit?: number;

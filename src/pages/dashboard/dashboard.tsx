@@ -26,12 +26,14 @@ import { StatCard } from '../../components/dashboard/StatCard'
 import { AIRecommendations } from '../../components/dashboard/AIRecommendations'
 import { useAuth } from '../../hooks/useAuth'
 import { useGetCompanyStatsQuery } from '../../__data__/api/companiesApi'
+import { useGetHomeAggregatesQuery } from '../../__data__/api/homeApi'
 
 export const DashboardPage = () => {
   const { t } = useTranslation('dashboard')
   const { user } = useAuth()
   const navigate = useNavigate()
   const { data: stats, isLoading } = useGetCompanyStatsQuery()
+  const { data: aggregates } = useGetHomeAggregatesQuery()
 
   const quickActions = [
     {
@@ -164,6 +166,48 @@ export const DashboardPage = () => {
 
         {/* AI Recommendations */}
         <AIRecommendations />
+
+        {/* Buy/Sell summary */}
+        <Box
+          bg={colors.bg.primary}
+          p={{ base: 4, md: 6 }}
+          borderRadius="lg"
+          shadow="sm"
+          borderWidth="1px"
+          borderColor={colors.border.primary}
+        >
+          <Heading size={{ base: 'sm', md: 'md' }} mb={4}>
+            {t('home.summary', 'Я покупаю / Я продаю')}
+          </Heading>
+          <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+            <Box borderWidth="1px" borderRadius="md" p={4}>
+              <HStack justify="space-between">
+                <Heading size="sm">{t('home.buy.title', 'Я покупаю')}</Heading>
+                <Button size="sm" onClick={() => navigate('/requests')}>{t('home.view', 'Перейти')}</Button>
+              </HStack>
+              <HStack mt={3} gap={6}>
+                <VStack align="start" gap={0}>
+                  <Text fontSize="xs" color="gray.500">{t('home.stats.docs', 'Документы')}</Text>
+                  <Heading size="md">{aggregates?.docsCount ?? 0}</Heading>
+                </VStack>
+                <VStack align="start" gap={0}>
+                  <Text fontSize="xs" color="gray.500">{t('home.stats.accepts', 'Акцепты')}</Text>
+                  <Heading size="md">{aggregates?.acceptsCount ?? 0}</Heading>
+                </VStack>
+              </HStack>
+            </Box>
+            <Box borderWidth="1px" borderRadius="md" p={4}>
+              <HStack justify="space-between">
+                <Heading size="sm">{t('home.sell.title', 'Я продаю')}</Heading>
+                <Button size="sm" onClick={() => navigate('/search')}>{t('home.view', 'Перейти')}</Button>
+              </HStack>
+              <VStack align="start" gap={0} mt={3}>
+                <Text fontSize="xs" color="gray.500">{t('home.stats.requests', 'Исходящие запросы')}</Text>
+                <Heading size="md">{aggregates?.requestsCount ?? 0}</Heading>
+              </VStack>
+            </Box>
+          </SimpleGrid>
+        </Box>
 
         {/* Recent Activity */}
         <Box

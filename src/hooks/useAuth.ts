@@ -20,8 +20,8 @@ export const useAuth = () => {
     refreshToken,
   } = useSelector((state: RootState) => state.auth)
   
-  const handleLogin = useCallback((authData: AuthResponse) => {
-    dispatch(setCredentials(authData))
+  const handleLogin = useCallback((authData: AuthResponse, rememberMe = false) => {
+    dispatch(setCredentials({ ...authData, rememberMe }))
   }, [dispatch])
   
   const handleLogout = useCallback(() => {

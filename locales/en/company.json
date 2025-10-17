@@ -61,5 +61,23 @@
     "your_review": "Your review",
     "submit": "Submit Review"
   }
+  ,
+  "experience": {
+    "title": "Work Experience",
+    "confirmed": "Confirmed",
+    "customer": "Customer",
+    "subject": "Subject",
+    "volume": "Volume",
+    "contact": "Contact",
+    "comment": "Comment",
+    "date": "Date",
+    "empty": "No experience records",
+    "yes": "Yes",
+    "no": "No",
+    "sort": {
+      "date": "By date",
+      "customer": "By customer"
+    }
+  }
 }
 

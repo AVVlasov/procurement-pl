@@ -4,6 +4,10 @@ import { authApi } from './api/authApi'
 import { companiesApi } from './api/companiesApi'
 import { productsApi } from './api/productsApi'
 import { searchApi } from './api/searchApi'
+import { buyApi } from './api/buyApi'
+import { messagesApi } from './api/messagesApi'
+import { requestsApi } from './api/requestsApi'
+import { homeApi } from './api/homeApi'
 import authReducer from './slices/authSlice'
 
 export const store = configureStore({
@@ -13,6 +17,10 @@ export const store = configureStore({
     [companiesApi.reducerPath]: companiesApi.reducer,
     [productsApi.reducerPath]: productsApi.reducer,
     [searchApi.reducerPath]: searchApi.reducer,
+    [buyApi.reducerPath]: buyApi.reducer,
+    [messagesApi.reducerPath]: messagesApi.reducer,
+    [requestsApi.reducerPath]: requestsApi.reducer,
+    [homeApi.reducerPath]: homeApi.reducer,
     
     // Regular slices
     auth: authReducer,
@@ -27,7 +35,11 @@ export const store = configureStore({
       authApi.middleware,
       companiesApi.middleware,
       productsApi.middleware,
-      searchApi.middleware
+      searchApi.middleware,
+      buyApi.middleware,
+      messagesApi.middleware,
+      requestsApi.middleware,
+      homeApi.middleware
     ),
 })
 

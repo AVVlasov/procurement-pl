@@ -26,7 +26,8 @@
     "success": "Success",
     "no_data": "No data",
     "select": "Select...",
-    "all": "All"
+    "all": "All",
+    "company": "Company"
   },
   "errors": {
     "required_field": "This field is required",
@@ -59,6 +60,66 @@
     "logout": "Logout",
     "open_menu": "Open menu",
     "change_language": "Change language"
+  },
+  "messages": {
+    "title": "Messages",
+    "newMessage": "Send",
+    "newMessageButton": "New Message",
+    "placeholder": "Write a message...",
+    "contact_company": "Contact Company",
+    "message_placeholder": "Write your message...",
+    "sent_successfully": "Message sent successfully",
+    "no_messages": "No messages",
+    "no_threads": "No conversations"
+  },
+  "buy": {
+    "title": "I Buy",
+    "upload": "Upload Document",
+    "accept": "Accept",
+    "acceptedBy": "Accepted by"
+  },
+  "requests": {
+    "title": "Bulk Requests",
+    "recipients": "Recipients",
+    "attachments": "Attachments",
+    "send": "Send",
+    "result": "Result",
+    "buyDocsTitle": "I Buy — Documents",
+    "uploadDocTitle": "Upload Document (.xlsx/.docx)",
+    "fileNameLabel": "File Name",
+    "fileTypeLabel": "Type",
+    "xlsxFileType": ".xlsx",
+    "docxFileType": ".docx",
+    "nameColumn": "Name",
+    "typeColumn": "Type",
+    "sizeColumn": "Size",
+    "acceptsColumn": "Accepts",
+    "actionsColumn": "Actions",
+    "acceptButton": "Accept",
+    "bulkRequestTitle": "Bulk Request Distribution (up to 20 recipients)",
+    "bulkTextLabel": "Request Text",
+    "recipientsLabel": "Recipients",
+    "recipientsCount": "Selected",
+    "sendBulkButton": "Send",
+    "finalReportTitle": "Final Report",
+    "exportHtmlButton": "Export HTML",
+    "exportXlsxButton": "Export XLSX",
+    "bulkTextPreview": "Request Text",
+    "companyColumn": "Company",
+    "statusColumn": "Status",
+    "messageColumn": "Message",
+    "successStatus": "Success",
+    "errorStatus": "Error",
+    "companyLabel": "Company",
+    "dateLabel": "Date",
+    "noDocsMessage": "No documents",
+    "noDocsDescription": "Your procurement documents will be displayed here"
+  },
+  "report": {
+    "title": "Final Report",
+    "preview": "Preview",
+    "exportHtml": "Export to HTML",
+    "exportXlsx": "Export to XLSX"
   }
 }
 

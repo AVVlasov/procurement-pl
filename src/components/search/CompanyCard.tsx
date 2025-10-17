@@ -18,7 +18,7 @@ import type { Company } from '../../__data__/api/companiesApi'
 
 interface CompanyCardProps {
   company: Company
-  onContact?: (companyId: string) => void
+  onContact?: (companyId: string, companyName?: string) => void
   onToggleFavorite?: (companyId: string) => void
   isFavorite?: boolean
 }
@@ -140,7 +140,7 @@ export const CompanyCard = ({
             flex={1}
             variant="outline"
             colorPalette="brand"
-            onClick={() => onContact?.(company.id)}
+            onClick={() => onContact?.(company.id, company.shortName || company.fullName)}
           >
             <FiMail />
             <Text ml={2}>{t('results.contact')}</Text>

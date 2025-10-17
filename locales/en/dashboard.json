@@ -26,6 +26,17 @@
     "create_request": "Create Request",
     "update_profile": "Update Profile",
     "view_messages": "View Messages"
+  },
+  "home": {
+    "summary": "I Buy / I Sell",
+    "buy": { "title": "I Buy" },
+    "sell": { "title": "I Sell" },
+    "view": "View",
+    "stats": {
+      "docs": "Documents",
+      "accepts": "Accepts",
+      "requests": "Outgoing requests"
+    }
   }
 }
 

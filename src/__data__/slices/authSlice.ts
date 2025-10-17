@@ -6,6 +6,7 @@ interface AuthState {
   company: AuthResponse['company'] | null;
   accessToken: string | null;
   refreshToken: string | null;
+  rememberMe: boolean;
   isAuthenticated: boolean;
   loading: boolean;
   error: string | null;
@@ -18,12 +19,26 @@ const loadTokensFromStorage = () => {
     const refreshToken = localStorage.getItem('refreshToken')
     const user = localStorage.getItem('user')
     const company = localStorage.getItem('company')
+    const rememberMe = localStorage.getItem('rememberMe') === 'true'
+    
+    // If rememberMe is false, clear tokens
+    if (!rememberMe) {
+      return {
+        accessToken: null,
+        refreshToken: null,
+        user: null,
+        company: null,
+        rememberMe: false,
+        isAuthenticated: false,
+      }
+    }
     
     return {
       accessToken,
       refreshToken,
       user: user ? JSON.parse(user) : null,
       company: company ? JSON.parse(company) : null,
+      rememberMe,
       isAuthenticated: !!accessToken,
     }
   }
@@ -33,6 +48,7 @@ const loadTokensFromStorage = () => {
     refreshToken: null,
     user: null,
     company: null,
+    rememberMe: false,
     isAuthenticated: false,
   }
 }
@@ -47,11 +63,12 @@ const authSlice = createSlice({
   name: 'auth',
   initialState,
   reducers: {
-    setCredentials: (state, action: PayloadAction<AuthResponse>) => {
+    setCredentials: (state, action: PayloadAction<AuthResponse & { rememberMe?: boolean }>) => {
       state.user = action.payload.user
       state.company = action.payload.company
       state.accessToken = action.payload.tokens.accessToken
       state.refreshToken = action.payload.tokens.refreshToken
+      state.rememberMe = action.payload.rememberMe ?? false
       state.isAuthenticated = true
       state.error = null
       
@@ -61,6 +78,7 @@ const authSlice = createSlice({
         localStorage.setItem('refreshToken', action.payload.tokens.refreshToken)
         localStorage.setItem('user', JSON.stringify(action.payload.user))
         localStorage.setItem('company', JSON.stringify(action.payload.company))
+        localStorage.setItem('rememberMe', JSON.stringify(state.rememberMe))
       }
     },
     
@@ -80,6 +98,7 @@ const authSlice = createSlice({
       state.company = null
       state.accessToken = null
       state.refreshToken = null
+      state.rememberMe = false
       state.isAuthenticated = false
       state.error = null
       
@@ -89,6 +108,7 @@ const authSlice = createSlice({
         localStorage.removeItem('refreshToken')
         localStorage.removeItem('user')
         localStorage.removeItem('company')
+        localStorage.removeItem('rememberMe')
       }
     },
     

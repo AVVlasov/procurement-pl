@@ -128,6 +128,7 @@ export type RegistrationFormData = z.infer<typeof registrationSchema>;
 export const loginSchema = z.object({
   email: emailValidator,
   password: z.string().min(1, 'Введите пароль'),
+  rememberMe: z.boolean().optional().default(false),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>;

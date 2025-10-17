@@ -26,7 +26,8 @@
     "success": "Успешно",
     "no_data": "Нет данных",
     "select": "Выберите...",
-    "all": "Все"
+    "all": "Все",
+    "company": "Компания"
   },
   "errors": {
     "required_field": "Это поле обязательно для заполнения",
@@ -59,6 +60,66 @@
     "logout": "Выйти",
     "open_menu": "Открыть меню",
     "change_language": "Сменить язык"
+  },
+  "messages": {
+    "title": "Сообщения",
+    "newMessage": "Отправить",
+    "newMessageButton": "Новое сообщение",
+    "placeholder": "Напишите сообщение...",
+    "contact_company": "Связаться с компанией",
+    "message_placeholder": "Напишите ваше сообщение...",
+    "sent_successfully": "Сообщение отправлено",
+    "no_messages": "Нет сообщений",
+    "no_threads": "Нет диалогов"
+  },
+  "buy": {
+    "title": "Я покупаю",
+    "upload": "Загрузить документ",
+    "accept": "Акцептовать",
+    "acceptedBy": "Акцептовали"
+  },
+  "requests": {
+    "title": "Массовые запросы",
+    "recipients": "Получатели",
+    "attachments": "Вложения",
+    "send": "Отправить",
+    "result": "Результат",
+    "buyDocsTitle": "Я покупаю — документы",
+    "uploadDocTitle": "Загрузка документа (.xlsx/.docx)",
+    "fileNameLabel": "Название файла",
+    "fileTypeLabel": "Тип",
+    "xlsxFileType": ".xlsx",
+    "docxFileType": ".docx",
+    "nameColumn": "Название",
+    "typeColumn": "Тип",
+    "sizeColumn": "Размер",
+    "acceptsColumn": "Акцепты",
+    "actionsColumn": "Действия",
+    "acceptButton": "Акцептовать",
+    "bulkRequestTitle": "Массовая рассылка запросов (до 20 получателей)",
+    "bulkTextLabel": "Текст запроса",
+    "recipientsLabel": "Получатели",
+    "recipientsCount": "Выбрано",
+    "sendBulkButton": "Отправить",
+    "finalReportTitle": "Итоговый отчет",
+    "exportHtmlButton": "Экспорт HTML",
+    "exportXlsxButton": "Экспорт XLSX",
+    "bulkTextPreview": "Текст запроса",
+    "companyColumn": "Компания",
+    "statusColumn": "Статус",
+    "messageColumn": "Сообщение",
+    "successStatus": "Успех",
+    "errorStatus": "Ошибка",
+    "companyLabel": "Компания",
+    "dateLabel": "Дата",
+    "noDocsMessage": "Нет документов",
+    "noDocsDescription": "Здесь будут отображаться ваши документы для закупок"
+  },
+  "report": {
+    "title": "Итоговый отчет",
+    "preview": "Предпросмотр",
+    "exportHtml": "Экспорт в HTML",
+    "exportXlsx": "Экспорт в XLSX"
   }
 }
 

@@ -7,6 +7,10 @@ import {
   VStack,
   Heading,
   Text,
+  Dialog,
+  Textarea,
+  Button,
+  HStack,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { MainLayout } from '../../components/layout/MainLayout'
@@ -21,6 +25,7 @@ import {
   useRemoveFromFavoritesMutation,
 } from '../../__data__/api/searchApi'
 import type { SearchParams, SearchResult } from '../../__data__/api/searchApi'
+import { useSendMessageMutation } from '../../__data__/api/messagesApi'
 
 export const SearchPage = () => {
   const { t } = useTranslation('search')
@@ -36,6 +41,10 @@ export const SearchPage = () => {
     sortOrder: 'desc',
   })
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
+  const [contactDialogOpen, setContactDialogOpen] = useState(false)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
+  const [selectedCompanyName, setSelectedCompanyName] = useState<string>('')
+  const [messageText, setMessageText] = useState('')
 
   const {
     data: searchResults,
@@ -49,6 +58,7 @@ export const SearchPage = () => {
   const [aiSearch, { isLoading: isAISearching }] = useAiSearchMutation()
   const [addToFavorites] = useAddToFavoritesMutation()
   const [removeFromFavorites] = useRemoveFromFavoritesMutation()
+  const [sendMessage, { isLoading: isSendingMessage }] = useSendMessageMutation()
 
   const handleSearch = async (query: string, aiMode = false) => {
     setSearchQuery(query)
@@ -82,9 +92,32 @@ export const SearchPage = () => {
     })
   }
 
-  const handleContact = (companyId: string) => {
-    // TODO: Open contact modal or navigate to messages
-    toast.info('Связаться с компанией', 'Функция в разработке')
+  const handleContact = (companyId: string, companyName?: string) => {
+    setSelectedCompanyId(companyId)
+    setSelectedCompanyName(companyName || companyId)
+    setContactDialogOpen(true)
+    setMessageText('')
+  }
+
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !selectedCompanyId) return
+    
+    try {
+      // Создаем thread ID на основе компаний
+      const threadId = `thread-${selectedCompanyId}-${Date.now()}`
+      await sendMessage({
+        threadId,
+        text: messageText,
+      }).unwrap()
+      
+      toast.success(t('common:messages.sent_successfully'))
+      setContactDialogOpen(false)
+      setMessageText('')
+      setSelectedCompanyId(null)
+      setSelectedCompanyName('')
+    } catch (error) {
+      toast.error(t('common:errors.server_error'))
+    }
   }
 
   const handleToggleFavorite = async (companyId: string) => {
@@ -165,6 +198,49 @@ export const SearchPage = () => {
           </Grid>
         </VStack>
       </Container>
+
+      {/* Contact Dialog */}
+      <Dialog.Root open={contactDialogOpen} onOpenChange={(details) => setContactDialogOpen(details.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Content>
+          <Dialog.Header>
+            <Dialog.Title>{t('common:messages.contact_company')}</Dialog.Title>
+          </Dialog.Header>
+          <Dialog.Body>
+            <VStack gap={4} align="stretch">
+              <Box>
+                <Text fontSize="sm" color="gray.600">{t('common:labels.company')}</Text>
+                <Text fontWeight="semibold">{selectedCompanyName}</Text>
+              </Box>
+              <Textarea
+                placeholder={t('common:messages.message_placeholder')}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                minH="150px"
+                resize="none"
+              />
+            </VStack>
+          </Dialog.Body>
+          <Dialog.Footer>
+            <HStack gap={3} justify="flex-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setContactDialogOpen(false)}
+              >
+                {t('common:buttons.cancel')}
+              </Button>
+              <Button
+                colorPalette="brand"
+                onClick={handleSendMessage}
+                loading={isSendingMessage}
+                disabled={!messageText.trim()}
+              >
+                {t('common:buttons.submit')}
+              </Button>
+            </HStack>
+          </Dialog.Footer>
+        </Dialog.Content>
+      </Dialog.Root>
     </MainLayout>
   )
 }

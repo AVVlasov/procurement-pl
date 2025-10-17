@@ -10,6 +10,7 @@ import { AboutTab } from './tabs/AboutTab'
 import { SpecializationTab } from './tabs/SpecializationTab'
 import { LegalTab } from './tabs/LegalTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
+import { ExperienceTab } from './tabs/ExperienceTab'
 import { colors } from '../../utils/colorMode'
 
 export const CompanyProfile = () => {
@@ -150,6 +151,9 @@ export const CompanyProfile = () => {
               </Tabs.Content>
               <Tabs.Content value="reviews">
                 <ReviewsTab />
+              </Tabs.Content>
+              <Tabs.Content value="experience">
+                <ExperienceTab />
               </Tabs.Content>
             </Box>
           </Tabs.Root>

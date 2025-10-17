@@ -22,7 +22,7 @@ interface ResultsGridProps {
   isLoading: boolean
   filters: SearchParams
   onFiltersChange: (filters: SearchParams) => void
-  onContact: (companyId: string) => void
+  onContact: (companyId: string, companyName?: string) => void
   onToggleFavorite: (companyId: string) => void
   favoriteIds?: string[]
 }

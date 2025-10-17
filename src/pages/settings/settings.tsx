@@ -1,14 +1,29 @@
 import React, { useState } from 'react'
-import { Box, Text, VStack, HStack, Button, Switch, NativeSelect } from '@chakra-ui/react'
+import { Box, Text, VStack, HStack, Button, Switch, NativeSelect, Field, Dialog, Input, Textarea, Checkbox } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiSettings, FiSave, FiUser, FiBell, FiShield } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
+import { useAuth } from '../../hooks/useAuth'
+import { toaster } from '../../components/ui/toaster'
+import { useAddCompanyExperienceMutation } from '../../__data__/api/companiesApi'
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation('common')
   const [notifications, setNotifications] = useState(true)
   const [emailUpdates, setEmailUpdates] = useState(false)
   const [language, setLanguage] = useState(i18n.language)
+  const { company } = useAuth()
+  const companyId = company?.id || 'company-123'
+  const [openAddExp, setOpenAddExp] = useState(false)
+  const [addExperience, { isLoading: isAdding }] = useAddCompanyExperienceMutation()
+  const [form, setForm] = useState({
+    confirmed: false,
+    customer: '',
+    subject: '',
+    volume: '',
+    contact: '',
+    comment: '',
+  })
 
   const handleLanguageChange = (value: string) => {
     setLanguage(value)
@@ -18,6 +33,17 @@ const SettingsPage = () => {
   const handleSave = () => {
     // Здесь будет логика сохранения настроек
     console.log('Settings saved')
+  }
+
+  const handleCreateExperience = async () => {
+    try {
+      await addExperience({ companyId, data: form }).unwrap()
+      toaster.create({ title: 'Запись опыта добавлена', type: 'success' })
+      setOpenAddExp(false)
+      setForm({ confirmed: false, customer: '', subject: '', volume: '', contact: '', comment: '' })
+    } catch (e) {
+      toaster.create({ title: 'Ошибка сохранения', type: 'error' })
+    }
   }
 
   return (
@@ -34,6 +60,25 @@ const SettingsPage = () => {
         </HStack>
 
         <VStack gap={6} align="stretch">
+          {/* Опыт работы (CRUD) */}
+          <Box
+            bg="white"
+            p={6}
+            borderRadius="lg"
+            shadow="sm"
+            borderWidth="1px"
+            borderColor="gray.200"
+          >
+            <HStack mb={4} justify="space-between">
+              <Text fontWeight="semibold">Опыт работы</Text>
+              <Button colorPalette="green" size="sm" onClick={() => setOpenAddExp(true)}>
+                Добавить запись
+              </Button>
+            </HStack>
+            <Text fontSize="sm" color="gray.600">
+              Добавляйте подтвержденные кейсы: заказчик, предмет закупки, объем и контакты.
+            </Text>
+          </Box>
           {/* Профиль */}
           <Box
             bg="white"
@@ -169,6 +214,58 @@ const SettingsPage = () => {
           </Box>
         </VStack>
       </Box>
+
+      {/* Dialog добавления опыта */}
+      <Dialog.Root open={openAddExp} onOpenChange={(e) => setOpenAddExp(e.open)}>
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Новая запись опыта</Dialog.Title>
+              <Dialog.CloseTrigger />
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack gap={4} align="stretch">
+                <Field.Root>
+                  <Checkbox.Root checked={form.confirmed} onCheckedChange={(e) => setForm({ ...form, confirmed: e.checked })}>
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                    <Checkbox.Label>Подтверждено</Checkbox.Label>
+                  </Checkbox.Root>
+                </Field.Root>
+                <Field.Root required>
+                  <Field.Label>Заказчик</Field.Label>
+                  <Input value={form.customer} onChange={(e) => setForm({ ...form, customer: e.target.value })} />
+                </Field.Root>
+                <Field.Root required>
+                  <Field.Label>Предмет закупки</Field.Label>
+                  <Input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} />
+                </Field.Root>
+                <Field.Root>
+                  <Field.Label>Объем</Field.Label>
+                  <Input value={form.volume} onChange={(e) => setForm({ ...form, volume: e.target.value })} />
+                </Field.Root>
+                <Field.Root>
+                  <Field.Label>Контакты</Field.Label>
+                  <Input value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
+                </Field.Root>
+                <Field.Root>
+                  <Field.Label>Комментарий</Field.Label>
+                  <Textarea value={form.comment} onChange={(e) => setForm({ ...form, comment: e.target.value })} rows={4} />
+                </Field.Root>
+              </VStack>
+            </Dialog.Body>
+            <Dialog.Footer>
+              <Button variant="ghost" onClick={() => setOpenAddExp(false)}>
+                Отмена
+              </Button>
+              <Button colorPalette="green" onClick={handleCreateExperience} loading={isAdding}>
+                Сохранить
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </MainLayout>
   )
 }

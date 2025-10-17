@@ -8,6 +8,7 @@ import {
   Checkbox,
   Slider,
   Text,
+  Switch,
   useDisclosure,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
@@ -31,6 +32,7 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
   const sizeDisclosure = useDisclosure({ defaultIsOpen: true })
   const geoDisclosure = useDisclosure({ defaultIsOpen: false })
   const ratingDisclosure = useDisclosure({ defaultIsOpen: false })
+  const acceptsDisclosure = useDisclosure({ defaultIsOpen: false })
 
   const FilterSection = ({
     title,
@@ -158,6 +160,34 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                 <Slider.Thumb index={0} />
               </Slider.Control>
             </Slider.Root>
+          </VStack>
+        </FilterSection>
+
+        {/* Reviews/Accepts Filters */}
+        <FilterSection title={t('filters.advanced') || 'Дополнительно'} disclosure={acceptsDisclosure}>
+          <VStack gap={3} align="stretch">
+            <HStack justify="space-between">
+              <Text>{t('filters.has_reviews') || 'Есть отзывы'}</Text>
+              <Switch.Root
+                checked={Boolean(filters.hasReviews)}
+                onCheckedChange={(e) => onChange({ ...filters, hasReviews: e.checked })}
+              >
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+              </Switch.Root>
+            </HStack>
+            <HStack justify="space-between">
+              <Text>{t('filters.has_accepted_docs') || 'С акцептами документации'}</Text>
+              <Switch.Root
+                checked={Boolean(filters.hasAcceptedDocs)}
+                onCheckedChange={(e) => onChange({ ...filters, hasAcceptedDocs: e.checked })}
+              >
+                <Switch.Control>
+                  <Switch.Thumb />
+                </Switch.Control>
+              </Switch.Root>
+            </HStack>
           </VStack>
         </FilterSection>
 

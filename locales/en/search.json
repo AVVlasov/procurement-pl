@@ -13,6 +13,9 @@
     "geography": "Geography",
     "rating": "Rating",
     "min_rating": "Minimum rating",
+    "advanced": "Advanced",
+    "has_reviews": "Has reviews",
+    "has_accepted_docs": "Has accepted docs",
     "reset": "Reset all",
     "apply": "Apply"
   },

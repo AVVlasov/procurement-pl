@@ -25,12 +25,15 @@ export const Login: React.FC = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      rememberMe: false,
+    },
   })
 
   const onSubmit = async (data: LoginFormData) => {
     try {
       const result = await loginMutation(data).unwrap()
-      login(result)
+      login(result, data.rememberMe)
       toast.success(t('login.success'))
       
       // Redirect to the page they tried to visit or dashboard
@@ -70,7 +73,7 @@ export const Login: React.FC = () => {
               />
 
               <HStack w="full" justify="space-between">
-                <FormCheckbox label={t('login.remember_me')} />
+                <FormCheckbox label={t('login.remember_me')} {...register('rememberMe')} />
                 <Link to="/auth/forgot-password">
                   <Text color="brand.600" fontSize="sm">
                     {t('login.forgot_password')}
