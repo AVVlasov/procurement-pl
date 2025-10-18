@@ -83,10 +83,10 @@ export const step3Schema = z.object({
 // Step 4: Marketing Schema
 export const step4Schema = z.object({
   source: z.string().optional(),
-  agreeToTerms: z.boolean().refine((val) => val === true, {
+  agreeToTerms: z.coerce.boolean().refine((val) => val === true, {
     message: 'Необходимо согласиться с условиями',
   }),
-  agreeToMarketing: z.boolean().optional(),
+  agreeToMarketing: z.coerce.boolean().optional(),
 })
 
 // Full registration schema (all steps combined)
@@ -120,8 +120,8 @@ export const registrationSchema = z.object({
   
   // Step 4
   source: z.string().optional(),
-  agreeToTerms: z.boolean(),
-  agreeToMarketing: z.boolean().optional(),
+  agreeToTerms: z.coerce.boolean(),
+  agreeToMarketing: z.coerce.boolean().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Пароли не совпадают',
   path: ['confirmPassword'],

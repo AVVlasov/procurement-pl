@@ -80,6 +80,7 @@ export const SearchPage = () => {
   }
 
   const handleFiltersChange = (newFilters: SearchParams) => {
+    console.log('[SearchPage] Filters changed:', newFilters)
     setFilters(newFilters)
   }
 

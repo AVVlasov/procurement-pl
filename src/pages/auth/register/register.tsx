@@ -96,11 +96,15 @@ export const Register: React.FC = () => {
 
   const onSubmit = async (data: RegistrationFormData) => {
     try {
+      console.log('Регистрация данные:', data)
+      console.log('agreeToTerms:', typeof data.agreeToTerms, data.agreeToTerms)
+      console.log('agreeToMarketing:', typeof data.agreeToMarketing, data.agreeToMarketing)
       const result = await registerMutation(data).unwrap()
       login(result)
       toast.success(t('register.success'))
       navigate('/dashboard')
     } catch (error: any) {
+      console.error('Ошибка регистрации:', error)
       toast.error(t('register.error'), error?.data?.message)
     }
   }

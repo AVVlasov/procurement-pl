@@ -1,96 +1,94 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
-const { mockCompanies } = require('../mocks/companies.json');
+const Company = require('../models/Company');
 
-// Маппинг отраслей для фильтрации
-const industryMapping = {
-  'it': 'IT',
-  'finance': 'Финансы',
-  'manufacturing': 'Производство',
-  'construction': 'Строительство',
-  'retail': 'Торговля',
-  'wholesale': 'Торговля',
-  'logistics': 'Логистика',
-  'healthcare': 'Медицина'
-};
-
-// GET /search/companies - Поиск компаний
-router.get('/companies', verifyToken, (req, res) => {
+// GET /search - Поиск компаний (с использованием MongoDB)
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const {
-      query = '',
-      industries = '',
-      companySizes = '',
-      geographies = '',
+    const { 
+      query = '', 
+      page = 1, 
+      limit = 10,
       minRating = 0,
       hasReviews,
-      hasAccepts
+      hasAcceptedDocs,
+      sortBy = 'relevance',
+      sortOrder = 'desc'
     } = req.query;
 
-    let result = [...mockCompanies];
+    console.log('[Search] Query:', { query, page, limit });
 
-    // Фильтр по текстовому запросу
-    if (query.trim()) {
-      const q = query.toLowerCase();
-      result = result.filter(c =>
-        c.fullName.toLowerCase().includes(q) ||
-        c.shortName.toLowerCase().includes(q) ||
-        c.slogan.toLowerCase().includes(q) ||
-        c.industry.toLowerCase().includes(q)
-      );
-    }
+    // Построение query для MongoDB
+    let mongoQuery = {};
 
-    // Фильтр по отраслям
-    if (industries) {
-      const selectedIndustries = industries.split(',');
-      result = result.filter(c => {
-        const mappedIndustries = selectedIndustries.map(i => industryMapping[i] || i);
-        return mappedIndustries.some(ind =>
-          c.industry.toLowerCase().includes(ind.toLowerCase())
-        );
-      });
-    }
-
-    // Фильтр по размеру компании
-    if (companySizes) {
-      const sizes = companySizes.split(',');
-      result = result.filter(c => {
-        if (!c.companySize) return false;
-        return sizes.some(size => {
-          if (size === '1-10') return c.companySize === '1-10';
-          if (size === '11-50') return c.companySize === '10-50';
-          if (size === '51-250') return c.companySize.includes('50') || c.companySize.includes('100') || c.companySize.includes('250');
-          if (size === '251-500') return c.companySize.includes('250') || c.companySize.includes('500');
-          if (size === '500+') return c.companySize === '500+';
-          return false;
-        });
-      });
+    // Текстовый поиск
+    if (query && query.trim()) {
+      mongoQuery.$or = [
+        { fullName: { $regex: query, $options: 'i' } },
+        { shortName: { $regex: query, $options: 'i' } },
+        { slogan: { $regex: query, $options: 'i' } },
+        { industry: { $regex: query, $options: 'i' } }
+      ];
     }
 
     // Фильтр по рейтингу
-    const rating = parseFloat(minRating);
-    if (rating > 0) {
-      result = result.filter(c => c.rating >= rating);
+    if (minRating) {
+      const rating = parseFloat(minRating);
+      if (rating > 0) {
+        mongoQuery.rating = { $gte: rating };
+      }
     }
 
-    // Фильтр по наличию отзывов
+    // Фильтр по отзывам
     if (hasReviews === 'true') {
-      result = result.filter(c => c.verified === true);
+      mongoQuery.verified = true;
     }
 
-    // Фильтр по акцептам документов
-    if (hasAccepts === 'true') {
-      result = result.filter(c => c.verified === true);
+    // Фильтр по акцептам
+    if (hasAcceptedDocs === 'true') {
+      mongoQuery.verified = true;
     }
+
+    // Пагинация
+    const pageNum = parseInt(page) || 1;
+    const limitNum = parseInt(limit) || 10;
+    const skip = (pageNum - 1) * limitNum;
+
+    // Сортировка
+    let sortObj = { rating: -1 };
+    if (sortBy === 'name') {
+      sortObj = { fullName: 1 };
+    }
+    if (sortOrder === 'asc') {
+      Object.keys(sortObj).forEach(key => {
+        sortObj[key] = sortObj[key] === -1 ? 1 : -1;
+      });
+    }
+
+    // Запрос к MongoDB
+    const companies = await Company.find(mongoQuery)
+      .limit(limitNum)
+      .skip(skip)
+      .sort(sortObj)
+      .lean();
+
+    const total = await Company.countDocuments(mongoQuery);
+
+    console.log('[Search] Returned', companies.length, 'companies');
 
     res.json({
-      companies: result,
-      total: result.length
+      companies,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / limitNum)
     });
   } catch (error) {
-    console.error('Search error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Search] Error:', error.message);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
   }
 });
 

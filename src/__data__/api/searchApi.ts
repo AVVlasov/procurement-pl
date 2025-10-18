@@ -40,16 +40,57 @@ export interface AISearchRequest {
   };
 }
 
+// Custom params serializer to handle arrays and booleans properly
+const serializeParams = (params: Record<string, any>): string => {
+  const searchParams = new URLSearchParams()
+  
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null) {
+      continue
+    }
+    
+    if (Array.isArray(value)) {
+      // For arrays, add multiple parameters with same name
+      value.forEach(v => {
+        if (v !== undefined && v !== null) {
+          searchParams.append(key, String(v))
+        }
+      })
+    } else if (typeof value === 'boolean') {
+      // For booleans, always include them
+      searchParams.set(key, value ? 'true' : 'false')
+    } else {
+      // For other types, just convert to string
+      searchParams.set(key, String(value))
+    }
+  }
+  
+  return searchParams.toString()
+}
+
 export const searchApi = createApi({
   reducerPath: 'searchApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/search` }),
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: `${URLs.apiUrl}/search`,
+    paramsSerializer: serializeParams,
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    }
+  }),
   tagTypes: ['Search', 'SavedSearch', 'History'],
   endpoints: (builder) => ({
     searchCompanies: builder.query<SearchResult, SearchParams>({
-      query: (params) => ({
-        url: '',
-        params,
-      }),
+      query: (params) => {
+        console.log('[searchApi] searchCompanies params:', params)
+        return {
+          url: '',
+          params,
+        }
+      },
       providesTags: ['Search'],
     }),
     

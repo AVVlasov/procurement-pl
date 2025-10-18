@@ -45,17 +45,13 @@ export const Step4Marketing: React.FC<Step4Props> = ({ register, errors }) => {
                   {' *'}
                 </Text>
               }
-              {...register('agreeToTerms', {
-                setValueAs: (v) => v === true || v === 'true' || v === 'on',
-              })}
+              {...register('agreeToTerms', { valueAsBoolean: true })}
               error={errors.agreeToTerms?.message}
             />
 
             <FormCheckbox
               label={t('register.step4.agree_to_marketing')}
-              {...register('agreeToMarketing', {
-                setValueAs: (v) => v === true || v === 'true' || v === 'on',
-              })}
+              {...register('agreeToMarketing', { valueAsBoolean: true })}
             />
           </VStack>
         </Box>
