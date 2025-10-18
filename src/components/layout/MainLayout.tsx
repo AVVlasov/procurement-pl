@@ -205,36 +205,28 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
           justifyContent="space-between"
           flexShrink={0}
         >
-          {/* Mobile menu button */}
-          <IconButton
-            display={{ base: 'flex', md: 'none' }}
-            size="sm"
-            variant="ghost"
-            onClick={() => setIsMobileMenuOpen(true)}
-            aria-label="Открыть меню"
-          >
-            <Box as={FiMenu} w={5} h={5} />
-          </IconButton>
+          {/* Mobile menu button and logo */}
+          <HStack gap={3}>
+            <IconButton
+              display={{ base: 'flex', md: 'none' }}
+              size="sm"
+              variant="ghost"
+              onClick={() => setIsMobileMenuOpen(true)}
+              aria-label="Открыть меню"
+            >
+              <Box as={FiMenu} w={5} h={5} />
+            </IconButton>
 
-          {/* Desktop logo */}
-          <Text
-            fontSize={{ base: 'lg', md: '2xl' }}
-            fontWeight="bold"
-            color="brand.500"
-            display={{ base: 'none', md: 'flex' }}
-          >
-            B2B Platform
-          </Text>
-
-          {/* Mobile logo */}
-          <Text
-            fontSize="lg"
-            fontWeight="bold"
-            color="brand.500"
-            display={{ base: 'flex', md: 'none' }}
-          >
-            B2B
-          </Text>
+            {/* Mobile logo - only visible when sidebar is hidden */}
+            <Text
+              fontSize="lg"
+              fontWeight="bold"
+              color="brand.500"
+              display={{ base: 'flex', md: 'none' }}
+            >
+              B2B Platform
+            </Text>
+          </HStack>
 
           <Flex gap={{ base: 2, md: 4 }} ml="auto" align="center">
             <IconButton
@@ -247,8 +239,8 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
             </IconButton>
 
             <Flex gap={2} align="center">
-              <Avatar.Root size={{ base: 'xs', md: 'sm' }} name={user?.name || 'User'}>
-                <Avatar.Fallback>{(user?.name || 'U')[0]}</Avatar.Fallback>
+              <Avatar.Root size={{ base: 'xs', md: 'sm' }} name={user?.firstName || 'User'}>
+                <Avatar.Fallback>{(user?.firstName || 'U')[0]}</Avatar.Fallback>
               </Avatar.Root>
               <VStack
                 display={{ base: 'none', lg: 'flex' }}
@@ -256,7 +248,9 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                 gap={0}
               >
                 <Text fontSize="sm" fontWeight="medium">
-                  {user?.name || user?.firstName || 'User'}
+                  {user?.firstName && user?.lastName 
+                    ? `${user.firstName} ${user.lastName}` 
+                    : user?.firstName || 'User'}
                 </Text>
                 <Text fontSize="xs" color="gray.500">
                   {user?.company?.name || ''}

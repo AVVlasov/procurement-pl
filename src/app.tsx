@@ -10,6 +10,7 @@ import './i18n'
 import { DashboardPage } from './pages/dashboard/dashboard'
 import { Login } from './pages/auth/login/login'
 import { Register } from './pages/auth/register/register'
+import { ForgotPasswordPage } from './pages/auth/forgot-password/ForgotPassword'
 import { CompanyProfile } from './pages/company/CompanyProfile'
 import { SearchPage } from './pages/search/search'
 import { MessagesPage } from './pages/messages/messages'
@@ -29,6 +30,7 @@ const App = () => {
                 {/* Public routes */}
                 <Route path="/auth/login" element={<Login />} />
                 <Route path="/auth/register" element={<Register />} />
+                <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                 
                 {/* Protected routes */}
                 <Route path="/" element={

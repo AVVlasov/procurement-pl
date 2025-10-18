@@ -27,7 +27,10 @@
     "no_data": "No data",
     "select": "Select...",
     "all": "All",
-    "company": "Company"
+    "company": "Company",
+    "title": "Title",
+    "description": "Description",
+    "message": "Message"
   },
   "errors": {
     "required_field": "This field is required",
@@ -70,7 +73,8 @@
     "message_placeholder": "Write your message...",
     "sent_successfully": "Message sent successfully",
     "no_messages": "No messages",
-    "no_threads": "No conversations"
+    "no_threads": "No conversations",
+    "send": "Send"
   },
   "buy": {
     "title": "I Buy",
@@ -96,6 +100,7 @@
     "acceptsColumn": "Accepts",
     "actionsColumn": "Actions",
     "acceptButton": "Accept",
+    "deleteButton": "Delete",
     "bulkRequestTitle": "Bulk Request Distribution (up to 20 recipients)",
     "bulkTextLabel": "Request Text",
     "recipientsLabel": "Recipients",

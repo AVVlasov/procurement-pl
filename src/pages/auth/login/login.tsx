@@ -1,11 +1,10 @@
 import React from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, SubmitHandler } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { Box, Button, Container, Heading, Text, VStack, HStack } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FormInput } from '../../../components/forms/FormInput'
-import { FormCheckbox } from '../../../components/forms/FormCheckbox'
 import { useLoginMutation } from '../../../__data__/api/authApi'
 import { useAuth } from '../../../hooks/useAuth'
 import { useToast } from '../../../hooks/useToast'
@@ -25,23 +24,26 @@ export const Login: React.FC = () => {
     formState: { errors },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      rememberMe: false,
-    },
   })
 
-  const onSubmit = async (data: LoginFormData) => {
+  const onSubmit: SubmitHandler<LoginFormData> = async (data) => {
     try {
       const result = await loginMutation(data).unwrap()
-      login(result, data.rememberMe)
+      login(result)
       toast.success(t('login.success'))
       
       // Redirect to the page they tried to visit or dashboard
-      const from = (location.state as any)?.from?.pathname || '/dashboard'
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
       navigate(from, { replace: true })
-    } catch (error: any) {
-      toast.error(t('login.error'), error?.data?.message)
+    } catch (error) {
+      const errorMessage = (error as { data?: { message: string } })?.data?.message
+      toast.error(t('login.error'), errorMessage)
     }
+  }
+
+  const handleFormSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    handleSubmit(onSubmit)()
   }
 
   return (
@@ -52,7 +54,7 @@ export const Login: React.FC = () => {
         </VStack>
 
         <Box w="full" bg="bg.surface" p={8} borderRadius="l3" borderWidth="1px">
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleFormSubmit}>
             <VStack gap={4}>
               <FormInput
                 label={t('login.email')}
@@ -72,14 +74,13 @@ export const Login: React.FC = () => {
                 required
               />
 
-              <HStack w="full" justify="space-between">
-                <FormCheckbox label={t('login.remember_me')} {...register('rememberMe')} />
+              <Box w="full" textAlign="end">
                 <Link to="/auth/forgot-password">
                   <Text color="brand.600" fontSize="sm">
                     {t('login.forgot_password')}
                   </Text>
                 </Link>
-              </HStack>
+              </Box>
 
               <Button
                 type="submit"

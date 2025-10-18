@@ -1,16 +1,30 @@
 import React, { useState } from 'react'
 import { Box, Text, VStack, HStack, Button, Badge, Field, Input, NativeSelect, Table } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { FiFileText, FiClock, FiCheck, FiX, FiUpload, FiSend } from 'react-icons/fi'
+import { FiFileText, FiClock, FiCheck, FiX, FiUpload, FiSend, FiDownload } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useAuth } from '../../hooks/useAuth'
-import { useGetBuyDocsQuery, useUploadBuyDocMutation, useAcceptBuyDocMutation } from '../../__data__/api/buyApi'
+import { useGetBuyDocsQuery, useUploadBuyDocMutation, useAcceptBuyDocMutation, useDeleteBuyDocMutation } from '../../__data__/api/buyApi'
 import { useSendBulkRequestMutation, useGetLastReportQuery } from '../../__data__/api/requestsApi'
 import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
-import { toaster } from '../../components/ui/toaster'
+import { useToast } from '../../hooks/useToast'
 import * as XLSX from 'xlsx'
+import { deleteFileFromRemoteAssets } from '../../utils/fileManager'
 
 const RequestsPage = () => {
+  const showToast = useToast()
+  
+  const safeToast = (options: { title: string; type: 'success' | 'error' | 'warning' | 'info' }) => {
+    try {
+      if (options.type === 'success') showToast.success(options.title)
+      else if (options.type === 'error') showToast.error(options.title)
+      else if (options.type === 'warning') showToast.warning(options.title)
+      else showToast.info(options.title)
+    } catch (e) {
+      // Fallback: just log to console if toast fails
+      console.log(`[${options.type.toUpperCase()}]`, options.title)
+    }
+  }
   const { t } = useTranslation('common')
   const { company } = useAuth()
   const companyId = company?.id || 'company-123'
@@ -18,42 +32,105 @@ const RequestsPage = () => {
   const [uploadDoc, { isLoading: isUploading }] = useUploadBuyDocMutation()
   const [acceptDoc] = useAcceptBuyDocMutation()
   const [sendBulk, { isLoading: isSending }] = useSendBulkRequestMutation()
+  const [deleteDoc] = useDeleteBuyDocMutation()
   const { data: companyOptions } = useSearchCompaniesQuery({ limit: 50 })
   const { data: lastReport } = useGetLastReportQuery()
   const [fileName, setFileName] = useState('')
   const [fileType, setFileType] = useState<'xlsx' | 'docx'>('xlsx')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [bulkText, setBulkText] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      setFileName(file.name.replace(/\.[^/.]+$/, '')) // Remove extension
+      setFileType(file.name.endsWith('.docx') ? 'docx' : 'xlsx')
+    }
+  }
 
   const handleUpload = async () => {
-    if (!fileName.trim()) return
+    if (!fileName.trim() || !selectedFile) {
+      showToast.warning(t('labels.select_file') || 'Пожалуйста, выберите файл')
+      return
+    }
     try {
-      await uploadDoc({ ownerCompanyId: companyId, name: fileName.trim(), type: fileType }).unwrap()
-      toaster.create({ title: t('labels.success'), type: 'success' })
-      setFileName('')
+      // Read file as base64 and send with metadata
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        if (!e.target?.result) {
+          showToast.error(t('labels.error') || 'Ошибка')
+          return
+        }
+        
+        const base64Data = (e.target.result as string).split(',')[1] // Remove data:application/... prefix
+        
+        try {
+          await uploadDoc({
+            ownerCompanyId: companyId,
+            name: fileName.trim(),
+            type: fileType,
+            fileData: base64Data,
+          }).unwrap()
+          showToast.success(t('labels.success') || 'Успешно')
+          setFileName('')
+          setSelectedFile(null)
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+        } catch {
+          showToast.error(t('labels.error') || 'Ошибка')
+        }
+      }
+      reader.onerror = () => {
+        showToast.error(t('labels.error') || 'Ошибка при чтении файла')
+      }
+      reader.readAsDataURL(selectedFile)
     } catch {
-      toaster.create({ title: t('labels.error'), type: 'error' })
+      showToast.error(t('labels.error') || 'Ошибка')
     }
   }
 
   const handleAccept = async (id: string) => {
     try {
       await acceptDoc({ id, companyId }).unwrap()
-      toaster.create({ title: t('labels.success'), type: 'success' })
+      safeToast({ title: t('labels.success'), type: 'success' })
     } catch {
-      toaster.create({ title: t('labels.error'), type: 'error' })
+      safeToast({ title: t('labels.error'), type: 'error' })
     }
+  }
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc({ id }).unwrap()
+      await deleteFileFromRemoteAssets(id)
+      safeToast({ title: t('labels.success'), type: 'success' })
+    } catch {
+      safeToast({ title: t('labels.error'), type: 'error' })
+    }
+  }
+
+  const handleDownload = (doc: typeof docs[0]) => {
+    // Download file
+    const a = document.createElement('a')
+    a.href = doc.url
+    a.download = `${doc.name}.${doc.type}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
   }
 
   const handleSendBulk = async () => {
     if (!bulkText.trim() || selectedRecipients.length === 0 || selectedRecipients.length > 20) return
     try {
       await sendBulk({ text: bulkText.trim(), recipientCompanyIds: selectedRecipients, files: [] }).unwrap()
-      toaster.create({ title: 'Рассылка отправлена', type: 'success' })
+      safeToast({ title: 'Рассылка отправлена', type: 'success' })
       setBulkText('')
       setSelectedRecipients([])
     } catch {
-      toaster.create({ title: t('labels.error'), type: 'error' })
+      safeToast({ title: t('labels.error'), type: 'error' })
     }
   }
 
@@ -142,17 +219,42 @@ const RequestsPage = () => {
         {/* Upload */}
         <VStack align="stretch" gap={4} p={4} borderWidth="1px" borderRadius="lg" bg="white">
           <Text fontWeight="semibold">{t('requests.uploadDocTitle')}</Text>
-          <HStack gap={3}>
-            <Field.Root required>
+          <HStack gap={3} wrap="wrap">
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleFileSelect} 
+              style={{ position: 'absolute', visibility: 'hidden', width: 0, height: 0 }} 
+              accept=".xlsx,.docx" 
+            />
+            <Button 
+              colorPalette="gray" 
+              onClick={() => {
+                if (fileInputRef.current) {
+                  fileInputRef.current.click()
+                }
+              }}
+              variant="outline"
+            >
+              <FiUpload />
+              <Text ml={2}>{selectedFile ? '📎 ' + selectedFile.name : 'Выбрать файл'}</Text>
+            </Button>
+            <Field.Root>
               <Field.Label>{t('requests.fileNameLabel')}</Field.Label>
-              <Input value={fileName} onChange={(e) => setFileName(e.target.value)} placeholder="specs.xlsx" />
+              <Input 
+                value={fileName} 
+                onChange={(e) => setFileName(e.target.value)} 
+                placeholder="Название без расширения"
+                readOnly={!!selectedFile}
+              />
             </Field.Root>
             <Field.Root>
               <Field.Label>{t('requests.fileTypeLabel')}</Field.Label>
-              <NativeSelect.Root size="sm" w="160px">
+              <NativeSelect.Root size="sm" w="120px">
                 <NativeSelect.Field
                   value={fileType}
                   onChange={(e) => setFileType(e.target.value as 'xlsx' | 'docx')}
+                  disabled={!!selectedFile}
                 >
                   <option value="xlsx">{t('requests.xlsxFileType')}</option>
                   <option value="docx">{t('requests.docxFileType')}</option>
@@ -160,7 +262,7 @@ const RequestsPage = () => {
                 <NativeSelect.Indicator />
               </NativeSelect.Root>
             </Field.Root>
-            <Button colorPalette="blue" onClick={handleUpload} disabled={!fileName.trim()} loading={isUploading ? true : undefined}>
+            <Button colorPalette="blue" onClick={handleUpload} disabled={!fileName.trim() || !selectedFile} loading={isUploading}>
               <FiUpload />
               <Text ml={2}>{t('buttons.upload')}</Text>
             </Button>
@@ -188,9 +290,16 @@ const RequestsPage = () => {
                   <Table.Cell>{d.acceptedBy.length}</Table.Cell>
                   <Table.Cell>
                     <HStack>
+                      <Button size="xs" variant="outline" onClick={() => handleDownload(d)} title="Скачать">
+                        <FiDownload />
+                      </Button>
                       <Button size="xs" variant="outline" onClick={() => handleAccept(d.id)}>
                         <FiCheck />
                         <Text ml={1}>{t('requests.acceptButton')}</Text>
+                      </Button>
+                      <Button size="xs" variant="outline" onClick={() => handleDelete(d.id)}>
+                        <FiX />
+                        <Text ml={1}>{t('requests.deleteButton')}</Text>
                       </Button>
                     </HStack>
                   </Table.Cell>
@@ -224,7 +333,7 @@ const RequestsPage = () => {
             <Text fontSize="xs" color="gray.500">{t('requests.recipientsCount')}: {selectedRecipients.length} / 20</Text>
           </Field.Root>
           <HStack>
-            <Button colorPalette="green" onClick={handleSendBulk} disabled={!bulkText.trim() || selectedRecipients.length === 0 || selectedRecipients.length > 20} loading={isSending ? true : undefined}>
+            <Button colorPalette="green" onClick={handleSendBulk} disabled={!bulkText.trim() || selectedRecipients.length === 0 || selectedRecipients.length > 20} loading={isSending}>
               <FiSend />
               <Text ml={2}>{t('requests.sendBulkButton')}</Text>
             </Button>

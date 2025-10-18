@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react'
-import { Box, Text, VStack, HStack, Avatar, Button, Input, Field, Separator } from '@chakra-ui/react'
+import { Box, Text, VStack, HStack, Avatar, Button, Input, Field, Separator, Dialog, Textarea } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiMail, FiSend, FiClock } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useGetThreadsQuery, useGetThreadMessagesQuery, useSendMessageMutation } from '../../__data__/api/messagesApi'
 import { useAuth } from '../../hooks/useAuth'
+import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
+import { useToast } from '../../hooks/useToast'
 
 const MessagesPage = () => {
   const { t } = useTranslation('common')
@@ -15,6 +17,12 @@ const MessagesPage = () => {
   const { data: messages = [] } = useGetThreadMessagesQuery(activeThreadId || '', { skip: !activeThreadId })
   const [sendMessage, { isLoading }] = useSendMessageMutation()
   const [text, setText] = useState('')
+  const { data: companyOptions } = useSearchCompaniesQuery({ limit: 50 })
+  const [newMessageOpen, setNewMessageOpen] = useState(false)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
+  const [selectedCompanyName, setSelectedCompanyName] = useState<string>('')
+  const [messageText, setMessageText] = useState('')
+  const { warning, success, error } = useToast()
 
   const activeThread = useMemo(() => threads.find(t => t.id === activeThreadId) || null, [threads, activeThreadId])
 
@@ -24,6 +32,30 @@ const MessagesPage = () => {
     setText('')
   }
 
+  const handleSendNewMessage = async () => {
+    if (!selectedCompanyId || !messageText.trim()) {
+      warning(t('messages.select_company'))
+      return
+    }
+
+    try {
+      const threadId = `thread-${selectedCompanyId}-${Date.now()}`
+      await sendMessage({
+        threadId,
+        senderCompanyId: myCompanyId,
+        text: messageText,
+      }).unwrap()
+
+      success(t('common:messages.sent_successfully'))
+      setNewMessageOpen(false)
+      setSelectedCompanyId('')
+      setSelectedCompanyName('')
+      setMessageText('')
+    } catch (e) {
+      error(t('common:errors.server_error'))
+    }
+  }
+
   return (
     <MainLayout>
       <Box>
@@ -31,7 +63,7 @@ const MessagesPage = () => {
           <Text fontSize="2xl" fontWeight="bold">
             {t('nav.messages')}
           </Text>
-          <Button colorPalette="blue" size="sm">
+          <Button colorPalette="blue" size="sm" onClick={() => setNewMessageOpen(true)}>
             <FiSend />
             <Text ml={2}>{t('messages.newMessageButton')}</Text>
           </Button>
@@ -105,6 +137,76 @@ const MessagesPage = () => {
           </VStack>
         )}
       </Box>
+
+      {/* New Message Dialog */}
+      <Dialog.Root open={newMessageOpen} onOpenChange={(details) => setNewMessageOpen(details.open)}>
+        <Dialog.Backdrop />
+        {/* @ts-ignore */}
+        <Dialog.Positioner>
+          {/* @ts-ignore */}
+          <Dialog.Content>
+            {/* @ts-ignore */}
+            <Dialog.Header>
+              {/* @ts-ignore */}
+              <Dialog.Title>{t('messages.newMessageButton')}</Dialog.Title>
+              <Dialog.CloseTrigger />
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack gap={4} align="stretch">
+                {/* @ts-ignore */}
+                <Field.Root required>
+                  {/* @ts-ignore */}
+                  <Field.Label>{t('common:labels.company')}</Field.Label>
+                  <Input 
+                    placeholder={t('common:labels.company')}
+                    value={selectedCompanyName}
+                    onClick={() => {
+                      // Show list of companies - simplified version
+                      const companyList = companyOptions?.companies || []
+                      if (companyList.length > 0) {
+                        const first = companyList[0]
+                        setSelectedCompanyId(first.id)
+                        setSelectedCompanyName(first.name)
+                      }
+                    }}
+                    readOnly
+                  />
+                </Field.Root>
+                {/* @ts-ignore */}
+                <Field.Root required>
+                  {/* @ts-ignore */}
+                  <Field.Label>{t('common:labels.message')}</Field.Label>
+                  <Textarea 
+                    placeholder={t('messages.placeholder')}
+                    value={messageText}
+                    onChange={(e) => setMessageText(e.target.value)}
+                    minH="150px"
+                    resize="none"
+                  />
+                </Field.Root>
+              </VStack>
+            </Dialog.Body>
+            {/* @ts-ignore */}
+            <Dialog.Footer>
+              <HStack gap={3} justify="flex-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setNewMessageOpen(false)}
+                >
+                  {t('buttons.cancel')}
+                </Button>
+                <Button
+                  colorPalette="blue"
+                  onClick={handleSendNewMessage}
+                  loading={isLoading}
+                >
+                  {t('messages.send')}
+                </Button>
+              </HStack>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </MainLayout>
   )
 }

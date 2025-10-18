@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { FiSettings, FiSave, FiUser, FiBell, FiShield } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useAuth } from '../../hooks/useAuth'
-import { toaster } from '../../components/ui/toaster'
-import { useAddCompanyExperienceMutation } from '../../__data__/api/companiesApi'
+import { useCreateExperienceMutation } from '../../__data__/api/experienceApi'
+import { useToast } from '../../hooks/useToast'
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation('common')
@@ -15,7 +15,8 @@ const SettingsPage = () => {
   const { company } = useAuth()
   const companyId = company?.id || 'company-123'
   const [openAddExp, setOpenAddExp] = useState(false)
-  const [addExperience, { isLoading: isAdding }] = useAddCompanyExperienceMutation()
+  const [createExperience, { isLoading: isAdding }] = useCreateExperienceMutation()
+  const { success, error } = useToast()
   const [form, setForm] = useState({
     confirmed: false,
     customer: '',
@@ -37,12 +38,12 @@ const SettingsPage = () => {
 
   const handleCreateExperience = async () => {
     try {
-      await addExperience({ companyId, data: form }).unwrap()
-      toaster.create({ title: 'Запись опыта добавлена', type: 'success' })
+      await createExperience({ companyId, data: form }).unwrap()
+      success('Запись опыта добавлена')
       setOpenAddExp(false)
       setForm({ confirmed: false, customer: '', subject: '', volume: '', contact: '', comment: '' })
     } catch (e) {
-      toaster.create({ title: 'Ошибка сохранения', type: 'error' })
+      error('Ошибка сохранения')
     }
   }
 

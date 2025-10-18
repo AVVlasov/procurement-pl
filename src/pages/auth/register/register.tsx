@@ -46,6 +46,32 @@ export const Register: React.FC = () => {
   } = useForm<RegistrationFormData>({
     resolver: zodResolver(registrationSchema),
     mode: 'onBlur',
+    defaultValues: {
+      inn: '',
+      ogrn: '',
+      fullName: '',
+      shortName: '',
+      legalForm: '',
+      industry: '',
+      companySize: '',
+      website: '',
+      firstName: '',
+      lastName: '',
+      middleName: '',
+      position: '',
+      phone: '',
+      email: '',
+      password: '',
+      confirmPassword: '',
+      platformGoals: [],
+      productsOffered: '',
+      productsNeeded: '',
+      partnerIndustries: [],
+      partnerGeography: [],
+      source: '',
+      agreeToTerms: false,
+      agreeToMarketing: false,
+    },
   })
 
   const handleNext = async () => {

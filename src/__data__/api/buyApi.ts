@@ -21,7 +21,7 @@ export const buyApi = createApi({
       query: (params) => ({ url: '/buy/docs', params }),
       providesTags: ['BuyDocs'],
     }),
-    uploadBuyDoc: builder.mutation<BuyDoc, { ownerCompanyId: string; name: string; type: 'xlsx' | 'docx' }>({
+    uploadBuyDoc: builder.mutation<BuyDoc, { ownerCompanyId: string; name: string; type: 'xlsx' | 'docx'; fileData?: string }>({
       query: (data) => ({ url: '/buy/docs', method: 'POST', body: data }),
       invalidatesTags: ['BuyDocs'],
     }),
@@ -29,9 +29,13 @@ export const buyApi = createApi({
       query: ({ id, companyId }) => ({ url: `/buy/docs/${id}/accept`, method: 'POST', body: { companyId } }),
       invalidatesTags: ['BuyDocs'],
     }),
+    deleteBuyDoc: builder.mutation<{ id: string }, { id: string }>({
+      query: ({ id }) => ({ url: `/buy/docs/${id}/delete`, method: 'GET' }),
+      invalidatesTags: ['BuyDocs'],
+    }),
   }),
 })
 
-export const { useGetBuyDocsQuery, useUploadBuyDocMutation, useAcceptBuyDocMutation } = buyApi
+export const { useGetBuyDocsQuery, useUploadBuyDocMutation, useAcceptBuyDocMutation, useDeleteBuyDocMutation } = buyApi
 
 

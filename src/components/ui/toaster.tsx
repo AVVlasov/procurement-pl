@@ -6,7 +6,7 @@ export const toaster = createToaster({
   pauseOnPageIdle: true,
 })
 
-export const Toaster = () => {
+export function Toaster() {
   return <ChakraToaster toaster={toaster} />
 }
 

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Box,
   Heading,
@@ -7,6 +7,10 @@ import {
   HStack,
   Text,
   Button,
+  Dialog,
+  Textarea,
+  Field,
+  Input,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -27,37 +31,66 @@ import { AIRecommendations } from '../../components/dashboard/AIRecommendations'
 import { useAuth } from '../../hooks/useAuth'
 import { useGetCompanyStatsQuery } from '../../__data__/api/companiesApi'
 import { useGetHomeAggregatesQuery } from '../../__data__/api/homeApi'
+import { useSendBulkRequestMutation } from '../../__data__/api/requestsApi'
+import { useToast } from '../../hooks/useToast'
 
 export const DashboardPage = () => {
   const { t } = useTranslation('dashboard')
   const { user } = useAuth()
   const navigate = useNavigate()
-  const { data: stats, isLoading } = useGetCompanyStatsQuery()
+  const { data: stats, isLoading: _isLoading } = useGetCompanyStatsQuery()
   const { data: aggregates } = useGetHomeAggregatesQuery()
+  const [createRequestOpen, setCreateRequestOpen] = useState(false)
+  const [requestTitle, setRequestTitle] = useState('')
+  const [requestDescription, setRequestDescription] = useState('')
+  const [sendBulkRequest, { isLoading: isSendingRequest }] = useSendBulkRequestMutation()
+  const { warning, success, error } = useToast()
+
+  const handleCreateRequest = async () => {
+    if (!requestTitle.trim() || !requestDescription.trim()) {
+      warning(t('common:errors.fill_all_fields'))
+      return
+    }
+
+    try {
+      await sendBulkRequest({
+        text: `${requestTitle}\n${requestDescription}`,
+        recipientCompanyIds: [],
+        files: [],
+      }).unwrap()
+      
+      success(t('common:messages.request_created'))
+      setCreateRequestOpen(false)
+      setRequestTitle('')
+      setRequestDescription('')
+    } catch (_error) {
+      error(t('common:errors.server_error'))
+    }
+  }
 
   const quickActions = [
     {
       icon: FiSearch,
       label: t('quick_actions.search_partners'),
-      path: '/search',
+      action: () => navigate('/search'),
       colorPalette: 'brand',
     },
     {
       icon: FiPlus,
       label: t('quick_actions.create_request'),
-      path: '/requests/new',
+      action: () => setCreateRequestOpen(true),
       colorPalette: 'green',
     },
     {
       icon: FiUser,
       label: t('quick_actions.update_profile'),
-      path: '/company/profile',
+      action: () => navigate('/company/profile'),
       colorPalette: 'blue',
     },
     {
       icon: FiMail,
       label: t('quick_actions.view_messages'),
-      path: '/messages',
+      action: () => navigate('/messages'),
       colorPalette: 'purple',
     },
   ]
@@ -68,7 +101,7 @@ export const DashboardPage = () => {
         {/* Welcome Header */}
         <Box>
           <Heading size={{ base: 'md', md: 'lg' }} mb={2}>
-            {t('welcome', { name: user?.name || 'User' })}
+            {t('welcome', { name: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : user?.firstName || 'User' })}
           </Heading>
           <Text color="gray.600" fontSize={{ base: 'sm', md: 'md' }}>
             {new Date().toLocaleDateString('ru-RU', {
@@ -130,34 +163,34 @@ export const DashboardPage = () => {
             {t('quick_actions.title')}
           </Heading>
           <SimpleGrid 
-            columns={{ base: 1, sm: 2, lg: 4 }} 
-            gap={{ base: 3, md: 4 }}
+            columns={{ base: 2, md: 4 }} 
+            gap={{ base: 2, md: 3 }}
+            w="full"
           >
             {quickActions.map((action) => (
               <Button
-                key={action.path}
+                key={action.label}
                 colorPalette={action.colorPalette}
                 variant="outline"
-                size={{ base: 'md', md: 'lg' }}
-                onClick={() => navigate(action.path)}
-                justifyContent="flex-start"
+                size="sm"
+                onClick={action.action}
+                flexDirection="column"
+                justifyContent="center"
+                alignItems="center"
                 w="full"
-                minH={{ base: '44px', md: '48px' }}
+                h="auto"
+                py={3}
+                px={2}
+                gap={2}
               >
-                <action.icon />
+                <action.icon size={18} />
                 <Text 
-                  fontSize={{ base: 'sm', md: 'md' }}
-                  ml={2}
-                  display={{ base: 'none', sm: 'block' }}
+                  fontSize="xs"
+                  whiteSpace="normal"
+                  textAlign="center"
+                  lineHeight="1.2"
                 >
                   {action.label}
-                </Text>
-                <Text 
-                  fontSize="sm"
-                  ml={2}
-                  display={{ base: 'block', sm: 'none' }}
-                >
-                  {action.label.split(' ')[0]}
                 </Text>
               </Button>
             ))}
@@ -231,6 +264,67 @@ export const DashboardPage = () => {
           </Text>
         </Box>
       </VStack>
+
+      {/* Create Request Dialog */}
+      <Dialog.Root open={createRequestOpen} onOpenChange={(details) => setCreateRequestOpen(details.open)}>
+        <Dialog.Backdrop />
+        {/* @ts-ignore */}
+        <Dialog.Positioner>
+          {/* @ts-ignore */}
+          <Dialog.Content>
+            {/* @ts-ignore */}
+            <Dialog.Header>
+              {/* @ts-ignore */}
+              <Dialog.Title>{t('quick_actions.create_request')}</Dialog.Title>
+              <Dialog.CloseTrigger />
+            </Dialog.Header>
+            <Dialog.Body>
+              <VStack gap={4} align="stretch">
+                {/* @ts-ignore */}
+                <Field.Root required>
+                  {/* @ts-ignore */}
+                  <Field.Label>{t('common:labels.title')}</Field.Label>
+                  <Input 
+                    placeholder={t('common:labels.title')}
+                    value={requestTitle}
+                    onChange={(e) => setRequestTitle(e.target.value)}
+                  />
+                </Field.Root>
+                {/* @ts-ignore */}
+                <Field.Root required>
+                  {/* @ts-ignore */}
+                  <Field.Label>{t('common:labels.description')}</Field.Label>
+                  <Textarea 
+                    placeholder={t('common:labels.description')}
+                    value={requestDescription}
+                    onChange={(e) => setRequestDescription(e.target.value)}
+                    minH="150px"
+                    resize="none"
+                  />
+                </Field.Root>
+              </VStack>
+            </Dialog.Body>
+            {/* @ts-ignore */}
+            <Dialog.Footer>
+              <HStack gap={3} justify="flex-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setCreateRequestOpen(false)}
+                >
+                  {t('common:buttons.cancel')}
+                </Button>
+                <Button
+                  colorPalette="green"
+                  onClick={handleCreateRequest}
+                  loading={isSendingRequest}
+                >
+                  {t('common:buttons.submit')}
+                </Button>
+              </HStack>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </MainLayout>
   )
 }

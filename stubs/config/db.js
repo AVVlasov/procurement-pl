@@ -4,17 +4,26 @@ const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/procurement_db';
     
-    await mongoose.connect(mongoUri, {
+    console.log('\n📡 Попытка подключения к MongoDB...');
+    console.log(`   URI: ${mongoUri}`);
+    
+    const connection = await mongoose.connect(mongoUri, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
     });
     
-    console.log('✅ MongoDB connected successfully');
-    return mongoose.connection;
+    console.log('✅ MongoDB подключена успешно!');
+    console.log(`   Хост: ${connection.connection.host}`);
+    console.log(`   БД: ${connection.connection.name}\n`);
+    
+    return connection;
   } catch (error) {
-    console.error('❌ MongoDB connection failed:', error.message);
-    // Не выходим из процесса, даем возможность работать с mock данными
-    console.warn('⚠️  Continuing without database connection...');
+    console.error('\n❌ Ошибка подключения к MongoDB:');
+    console.error(`   ${error.message}\n`);
+    console.warn('⚠️  Приложение продолжит работу с mock данными\n');
+    
     return null;
   }
 };

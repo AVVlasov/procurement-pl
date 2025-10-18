@@ -12,6 +12,7 @@ module.exports = {
     'procurement-pl.main': '/',
     'link.procurement-pl.auth.login': '/auth/login',
     'link.procurement-pl.auth.register': '/auth/register',
+    'link.procurement-pl.auth.forgot-password': '/auth/forgot-password',
     'link.procurement-pl.dashboard': '/dashboard',
     'link.procurement-pl.company': '/company/:id',
     'link.procurement-pl.search': '/search'

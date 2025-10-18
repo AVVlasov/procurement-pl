@@ -8,6 +8,7 @@ import { buyApi } from './api/buyApi'
 import { messagesApi } from './api/messagesApi'
 import { requestsApi } from './api/requestsApi'
 import { homeApi } from './api/homeApi'
+import { baseApi } from './api/client'
 import authReducer from './slices/authSlice'
 
 export const store = configureStore({
@@ -21,6 +22,7 @@ export const store = configureStore({
     [messagesApi.reducerPath]: messagesApi.reducer,
     [requestsApi.reducerPath]: requestsApi.reducer,
     [homeApi.reducerPath]: homeApi.reducer,
+    [baseApi.reducerPath]: baseApi.reducer,
     
     // Regular slices
     auth: authReducer,
@@ -39,7 +41,8 @@ export const store = configureStore({
       buyApi.middleware,
       messagesApi.middleware,
       requestsApi.middleware,
-      homeApi.middleware
+      homeApi.middleware,
+      baseApi.middleware
     ),
 })
 

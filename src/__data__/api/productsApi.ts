@@ -35,11 +35,20 @@ export interface UploadFileRequest {
 
 export const productsApi = createApi({
   reducerPath: 'productsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/products` }),
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: `${URLs.apiUrl}/products`,
+    prepareHeaders: (headers) => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        headers.set('authorization', `Bearer ${token}`);
+      }
+      return headers;
+    }
+  }),
   tagTypes: ['Product', 'ProductFile'],
   endpoints: (builder) => ({
-    getProducts: builder.query<Product[], void>({
-      query: () => '/my',
+    getProducts: builder.query<Product[], { companyId: string }>({
+      query: ({ companyId }) => `?companyId=${companyId}`,
       providesTags: (result) =>
         result
           ? [
@@ -54,7 +63,7 @@ export const productsApi = createApi({
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
     
-    createProduct: builder.mutation<Product, CreateProductRequest>({
+    createProduct: builder.mutation<Product, CreateProductRequest & { companyId: string }>({
       query: (data) => ({
         url: '',
         method: 'POST',

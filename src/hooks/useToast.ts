@@ -26,7 +26,6 @@ export const useToast = () => {
       title: options.title,
       description: options.description,
       type: status,
-      duration: options.duration ?? 3000,
     })
   }, [])
 

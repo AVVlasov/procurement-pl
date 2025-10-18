@@ -55,7 +55,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Обновить компанию (требует авторизации)
-router.put('/:id', verifyToken, async (req, res) => {
+const updateCompanyHandler = async (req, res) => {
   try {
     const company = await Company.findByIdAndUpdate(
       req.params.id,
@@ -71,7 +71,10 @@ router.put('/:id', verifyToken, async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
+};
+
+router.put('/:id', verifyToken, updateCompanyHandler);
+router.patch('/:id', verifyToken, updateCompanyHandler);
 
 // Поиск с AI анализом
 router.post('/ai-search', async (req, res) => {

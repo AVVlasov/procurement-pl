@@ -34,28 +34,38 @@ const passwordValidator = z
   .regex(/[a-z]/, 'Пароль должен содержать хотя бы одну строчную букву')
   .regex(/[0-9]/, 'Пароль должен содержать хотя бы одну цифру')
 
+// Helper для селектов - преобразует пустую строку в undefined и выдает русское сообщение
+const selectValidator = (errorMessage: string) =>
+  z
+    .string({ 
+      required_error: errorMessage,
+      invalid_type_error: errorMessage 
+    })
+    .min(1, errorMessage)
+    .refine((val) => val !== '', { message: errorMessage })
+
 // Step 1: Company Info Schema
 export const step1Schema = z.object({
   inn: innValidator,
   ogrn: ogrnValidator,
-  fullName: z.string().min(1, 'Полное наименование обязательно').min(3, 'Минимум 3 символа'),
+  fullName: z.string({ required_error: 'Полное наименование обязательно' }).min(1, 'Полное наименование обязательно').min(3, 'Минимум 3 символа'),
   shortName: z.string().optional(),
-  legalForm: z.string().min(1, 'Выберите организационно-правовую форму'),
-  industry: z.string().min(1, 'Выберите сферу деятельности'),
-  companySize: z.string().min(1, 'Выберите размер компании'),
+  legalForm: selectValidator('Выберите организационно-правовую форму'),
+  industry: selectValidator('Выберите сферу деятельности'),
+  companySize: selectValidator('Выберите размер компании'),
   website: urlValidator,
 })
 
 // Step 2: Contact Person Schema
 export const step2Schema = z.object({
-  firstName: z.string().min(1, 'Имя обязательно').min(2, 'Минимум 2 символа'),
-  lastName: z.string().min(1, 'Фамилия обязательна').min(2, 'Минимум 2 символа'),
+  firstName: z.string({ required_error: 'Имя обязательно' }).min(1, 'Имя обязательно').min(2, 'Минимум 2 символа'),
+  lastName: z.string({ required_error: 'Фамилия обязательна' }).min(1, 'Фамилия обязательна').min(2, 'Минимум 2 символа'),
   middleName: z.string().optional(),
-  position: z.string().min(1, 'Выберите должность'),
+  position: selectValidator('Выберите должность'),
   phone: phoneValidator,
   email: emailValidator,
   password: passwordValidator,
-  confirmPassword: z.string().min(1, 'Подтвердите пароль'),
+  confirmPassword: z.string({ required_error: 'Подтвердите пароль' }).min(1, 'Подтвердите пароль'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'Пароли не совпадают',
   path: ['confirmPassword'],
@@ -64,8 +74,8 @@ export const step2Schema = z.object({
 // Step 3: Needs Schema
 export const step3Schema = z.object({
   platformGoals: z.array(z.string()).min(1, 'Выберите хотя бы одну цель'),
-  productsOffered: z.string().min(1, 'Опишите предлагаемые продукты/услуги').min(10, 'Минимум 10 символов'),
-  productsNeeded: z.string().min(1, 'Опишите требуемые продукты/услуги').min(10, 'Минимум 10 символов'),
+  productsOffered: z.string({ required_error: 'Опишите предлагаемые продукты/услуги' }).min(1, 'Опишите предлагаемые продукты/услуги').min(10, 'Минимум 10 символов'),
+  productsNeeded: z.string({ required_error: 'Опишите требуемые продукты/услуги' }).min(1, 'Опишите требуемые продукты/услуги').min(10, 'Минимум 10 символов'),
   partnerIndustries: z.array(z.string()).optional(),
   partnerGeography: z.array(z.string()).optional(),
 })
@@ -84,29 +94,29 @@ export const registrationSchema = z.object({
   // Step 1
   inn: innValidator,
   ogrn: ogrnValidator,
-  fullName: z.string().min(1, 'Полное наименование обязательно'),
+  fullName: z.string({ required_error: 'Полное наименование обязательно' }).min(1, 'Полное наименование обязательно'),
   shortName: z.string().optional(),
-  legalForm: z.string().min(1, 'Выберите организационно-правовую форму'),
-  industry: z.string().min(1, 'Выберите сферу деятельности'),
-  companySize: z.string().min(1, 'Выберите размер компании'),
+  legalForm: selectValidator('Выберите организационно-правовую форму'),
+  industry: selectValidator('Выберите сферу деятельности'),
+  companySize: selectValidator('Выберите размер компании'),
   website: urlValidator,
   
   // Step 2
-  firstName: z.string().min(1, 'Имя обязательно'),
-  lastName: z.string().min(1, 'Фамилия обязательна'),
+  firstName: z.string({ required_error: 'Имя обязательно' }).min(1, 'Имя обязательно'),
+  lastName: z.string({ required_error: 'Фамилия обязательна' }).min(1, 'Фамилия обязательна'),
   middleName: z.string().optional(),
-  position: z.string().min(1, 'Выберите должность'),
+  position: selectValidator('Выберите должность'),
   phone: phoneValidator,
   email: emailValidator,
   password: passwordValidator,
-  confirmPassword: z.string(),
+  confirmPassword: z.string({ required_error: 'Подтвердите пароль' }),
   
   // Step 3
   platformGoals: z.array(z.string()).min(1, 'Выберите хотя бы одну цель'),
-  productsOffered: z.string().min(1, 'Опишите предлагаемые продукты/услуги'),
-  productsNeeded: z.string().min(1, 'Опишите требуемые продукты/услуги'),
-  partnerIndustries: z.array(z.string()).optional(),
-  partnerGeography: z.array(z.string()).optional(),
+  productsOffered: z.string({ required_error: 'Опишите предлагаемые продукты/услуги' }).min(1, 'Опишите предлагаемые продукты/услуги'),
+  productsNeeded: z.string({ required_error: 'Опишите требуемые продукты/услуги' }).min(1, 'Опишите требуемые продукты/услуги'),
+  partnerIndustries: z.array(z.string()).default([]),
+  partnerGeography: z.array(z.string()).default([]),
   
   // Step 4
   source: z.string().optional(),
@@ -128,7 +138,6 @@ export type RegistrationFormData = z.infer<typeof registrationSchema>;
 export const loginSchema = z.object({
   email: emailValidator,
   password: z.string().min(1, 'Введите пароль'),
-  rememberMe: z.boolean().optional().default(false),
 })
 
 export type LoginFormData = z.infer<typeof loginSchema>;

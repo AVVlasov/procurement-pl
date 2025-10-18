@@ -83,18 +83,29 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
         <FilterSection title={t('filters.industry')} disclosure={industryDisclosure}>
           <Checkbox.Group
             value={filters.industries || []}
-            onChange={(details) =>
-              onChange({ ...filters, industries: details.value as string[] })
-            }
+            onValueChange={(details) => {
+              console.log('[FiltersPanel] Industry changed:', details)
+              onChange({ ...filters, industries: details.value })
+            }}
           >
             <VStack gap={2} align="stretch">
-              {INDUSTRIES.slice(0, 8).map((industry) => (
-                <Checkbox.Root key={industry.value} value={industry.value}>
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>{industry.label}</Checkbox.Label>
-                </Checkbox.Root>
-              ))}
+              {INDUSTRIES.slice(0, 8).map((industry) => {
+                const isChecked = (filters.industries || []).includes(industry.value)
+                return (
+                  <Checkbox.Root 
+                    key={industry.value} 
+                    value={industry.value} 
+                    checked={isChecked}
+                    _hover={{ bg: 'gray.50' }}
+                    p={1}
+                    borderRadius="md"
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                    <Checkbox.Label cursor="pointer">{industry.label}</Checkbox.Label>
+                  </Checkbox.Root>
+                )
+              })}
             </VStack>
           </Checkbox.Group>
         </FilterSection>
@@ -103,18 +114,28 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
         <FilterSection title={t('filters.company_size')} disclosure={sizeDisclosure}>
           <Checkbox.Group
             value={filters.companySize || []}
-            onChange={(details) =>
-              onChange({ ...filters, companySize: details.value as string[] })
+            onValueChange={(details) =>
+              onChange({ ...filters, companySize: details.value })
             }
           >
             <VStack gap={2} align="stretch">
-              {COMPANY_SIZES.map((size) => (
-                <Checkbox.Root key={size.value} value={size.value}>
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>{size.label}</Checkbox.Label>
-                </Checkbox.Root>
-              ))}
+              {COMPANY_SIZES.map((size) => {
+                const isChecked = (filters.companySize || []).includes(size.value)
+                return (
+                  <Checkbox.Root 
+                    key={size.value} 
+                    value={size.value} 
+                    checked={isChecked}
+                    _hover={{ bg: 'gray.50' }}
+                    p={1}
+                    borderRadius="md"
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                    <Checkbox.Label cursor="pointer">{size.label}</Checkbox.Label>
+                  </Checkbox.Root>
+                )
+              })}
             </VStack>
           </Checkbox.Group>
         </FilterSection>
@@ -123,18 +144,28 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
         <FilterSection title={t('filters.geography')} disclosure={geoDisclosure}>
           <Checkbox.Group
             value={filters.geography || []}
-            onChange={(details) =>
-              onChange({ ...filters, geography: details.value as string[] })
+            onValueChange={(details) =>
+              onChange({ ...filters, geography: details.value })
             }
           >
             <VStack gap={2} align="stretch">
-              {GEOGRAPHY_OPTIONS.slice(0, 8).map((geo) => (
-                <Checkbox.Root key={geo.value} value={geo.value}>
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label>{geo.label}</Checkbox.Label>
-                </Checkbox.Root>
-              ))}
+              {GEOGRAPHY_OPTIONS.slice(0, 8).map((geo) => {
+                const isChecked = (filters.geography || []).includes(geo.value)
+                return (
+                  <Checkbox.Root 
+                    key={geo.value} 
+                    value={geo.value} 
+                    checked={isChecked}
+                    _hover={{ bg: 'gray.50' }}
+                    p={1}
+                    borderRadius="md"
+                  >
+                    <Checkbox.HiddenInput />
+                    <Checkbox.Control />
+                    <Checkbox.Label cursor="pointer">{geo.label}</Checkbox.Label>
+                  </Checkbox.Root>
+                )
+              })}
             </VStack>
           </Checkbox.Group>
         </FilterSection>
@@ -147,7 +178,7 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             </Text>
             <Slider.Root
               value={[filters.minRating || 0]}
-              onChange={(details) => onChange({ ...filters, minRating: details.value[0] })}
+              onValueChange={(details) => onChange({ ...filters, minRating: details.value[0] })}
               min={0}
               max={5}
               step={0.5}

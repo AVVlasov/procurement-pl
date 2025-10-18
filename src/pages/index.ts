@@ -1,6 +1,7 @@
 // Auth Pages
 export { Login } from './auth/login/login'
 export { Register } from './auth/register/register'
+export { ForgotPasswordPage } from './auth/forgot-password/ForgotPassword'
 
 // Dashboard
 export { DashboardPage } from './dashboard/dashboard'
