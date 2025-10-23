@@ -24,14 +24,17 @@ import {
 import { useAuth } from '../../../hooks/useAuth'
 import { useToast } from '../../../hooks/useToast'
 
-export const AboutTab = () => {
+export const AboutTab = ({ companyId, isOwnCompany }: { companyId?: string; isOwnCompany?: boolean }) => {
   const { t } = useTranslation('company')
   const { user } = useAuth()
   const toast = useToast()
   const [isEditing, setIsEditing] = useState(false)
 
-  const { data: company, isLoading } = useGetCompanyQuery(user?.companyId || '', {
-    skip: !user?.companyId,
+  const finalCompanyId = companyId || user?.companyId
+  const isEditingOwn = isOwnCompany !== false
+
+  const { data: company, isLoading } = useGetCompanyQuery(finalCompanyId || '', {
+    skip: !finalCompanyId,
   })
   const [updateCompany, { isLoading: isUpdating }] = useUpdateCompanyMutation()
   const [uploadLogo, { isLoading: isUploading }] = useUploadLogoMutation()
@@ -117,7 +120,7 @@ export const AboutTab = () => {
       {/* Header */}
       <HStack justify="space-between" flexWrap="wrap" gap={2}>
         <Heading size={{ base: 'md', md: 'lg' }}>{t('about.title')}</Heading>
-        {!isEditing ? (
+        {!isEditing && isEditingOwn ? (
           <Button
             colorPalette="brand"
             onClick={() => setIsEditing(true)}
@@ -131,7 +134,8 @@ export const AboutTab = () => {
               Изменить
             </Text>
           </Button>
-        ) : (
+        ) : null}
+        {isEditing ? (
           <HStack gap={2}>
             <Button
               colorPalette="brand"
@@ -161,7 +165,7 @@ export const AboutTab = () => {
               </Text>
             </Button>
           </HStack>
-        )}
+        ) : null}
       </HStack>
 
       {/* Logo Section */}

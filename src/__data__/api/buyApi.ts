@@ -1,5 +1,19 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
+
+// Base query with authorization
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${URLs.apiUrl}`,
+  prepareHeaders: (headers, { getState }) => {
+    const state = getState() as RootState | undefined
+    const token = state?.auth?.accessToken
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`)
+    }
+    return headers
+  },
+})
 
 export interface BuyDoc {
   id: string
@@ -14,7 +28,7 @@ export interface BuyDoc {
 
 export const buyApi = createApi({
   reducerPath: 'buyApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}` }),
+  baseQuery: baseQuery,
   tagTypes: ['BuyDocs'],
   endpoints: (builder) => ({
     getBuyDocs: builder.query<BuyDoc[], { ownerCompanyId?: string } | void>({

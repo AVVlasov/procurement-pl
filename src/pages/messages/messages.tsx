@@ -1,212 +1,300 @@
-import React, { useMemo, useState } from 'react'
-import { Box, Text, VStack, HStack, Avatar, Button, Input, Field, Separator, Dialog, Textarea } from '@chakra-ui/react'
+import React, { useState, useMemo } from 'react'
+import { 
+  Box, Text, VStack, HStack, Button, Input, Field, Dialog, Textarea, 
+  Container, Heading, Badge, Flex
+} from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { FiMail, FiSend, FiClock } from 'react-icons/fi'
+import { FiSearch, FiX } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useGetThreadsQuery, useGetThreadMessagesQuery, useSendMessageMutation } from '../../__data__/api/messagesApi'
 import { useAuth } from '../../hooks/useAuth'
 import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
-import { useToast } from '../../hooks/useToast'
 
 const MessagesPage = () => {
   const { t } = useTranslation('common')
   const { company } = useAuth()
-  const myCompanyId = company?.id || 'company-123'
+  const myCompanyId = company?.id
+  
   const { data: threads = [] } = useGetThreadsQuery()
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(threads[0]?.id || null)
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
   const { data: messages = [] } = useGetThreadMessagesQuery(activeThreadId || '', { skip: !activeThreadId })
-  const [sendMessage, { isLoading }] = useSendMessageMutation()
-  const [text, setText] = useState('')
-  const { data: companyOptions } = useSearchCompaniesQuery({ limit: 50 })
-  const [newMessageOpen, setNewMessageOpen] = useState(false)
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('')
-  const [selectedCompanyName, setSelectedCompanyName] = useState<string>('')
+  const [sendMessage, { isLoading: isSending }] = useSendMessageMutation()
   const [messageText, setMessageText] = useState('')
-  const { warning, success, error } = useToast()
+  const { data: companyOptions } = useSearchCompaniesQuery({ limit: 100 })
+  const [searchQuery, setSearchQuery] = useState('')
 
-  const activeThread = useMemo(() => threads.find(t => t.id === activeThreadId) || null, [threads, activeThreadId])
+  // Группируем диалоги по компаниям
+  const groupedThreads = useMemo(() => {
+    const grouped: Record<string, any> = {}
+    
+    threads.forEach((thread: any) => {
+      const threadId = thread.id || thread._id
+      const otherCompanyId = thread.participantId || 
+        (threadId.includes('thread-') ? 
+          threadId.split('-').slice(1).join('-') 
+          : 'Unknown')
+      
+      if (!grouped[otherCompanyId]) {
+        grouped[otherCompanyId] = { ...thread, threadId }
+      }
+    })
+    
+    return grouped
+  }, [threads])
 
-  const handleSend = async () => {
-    if (!activeThreadId || text.trim() === '') return
-    await sendMessage({ threadId: activeThreadId, senderCompanyId: myCompanyId, text }).unwrap()
-    setText('')
+  // Фильтруем компании по поиску
+  const filteredCompanies = useMemo(() => {
+    if (!searchQuery) return []
+    
+    return (companyOptions?.companies || [])
+      .filter((c: any) => {
+        const name = (c.shortName || c.fullName || '').toLowerCase()
+        return name.includes(searchQuery.toLowerCase())
+      })
+      .filter((c: any) => c.id !== myCompanyId)
+  }, [searchQuery, companyOptions, myCompanyId])
+
+  // История компаний с которыми переписывались
+  const conversationHistory = useMemo(() => {
+    return Object.entries(groupedThreads).map(([companyId, thread]: any) => {
+      const company = companyOptions?.companies?.find((c: any) => c.id === companyId)
+      return {
+        companyId,
+        company: company || { id: companyId, shortName: companyId },
+        thread,
+        hasUnread: false  // Можно добавить логику для отслеживания непрочитанных
+      }
+    }).sort((a, b) => {
+      const dateA = new Date(a.thread.lastMessageAt || 0).getTime()
+      const dateB = new Date(b.thread.lastMessageAt || 0).getTime()
+      return dateB - dateA
+    })
+  }, [groupedThreads, companyOptions])
+
+  const activeCompanyId = activeThreadId 
+    ? activeThreadId.split('-').slice(1).join('-')
+    : null
+
+  const handleSelectCompany = (companyId: string) => {
+    const threadId = `thread-${[myCompanyId, companyId].sort().join('-')}`
+    setActiveThreadId(threadId)
+    setSearchQuery('')
   }
 
-  const handleSendNewMessage = async () => {
-    if (!selectedCompanyId || !messageText.trim()) {
-      warning(t('messages.select_company'))
-      return
-    }
-
+  const handleSend = async () => {
+    if (!activeThreadId || !messageText.trim()) return
+    
     try {
-      const threadId = `thread-${selectedCompanyId}-${Date.now()}`
-      await sendMessage({
-        threadId,
-        senderCompanyId: myCompanyId,
-        text: messageText,
+      await sendMessage({ 
+        threadId: activeThreadId, 
+        senderCompanyId: myCompanyId, 
+        text: messageText 
       }).unwrap()
-
-      success(t('common:messages.sent_successfully'))
-      setNewMessageOpen(false)
-      setSelectedCompanyId('')
-      setSelectedCompanyName('')
       setMessageText('')
     } catch (e) {
-      error(t('common:errors.server_error'))
+      console.error('Error sending message', e)
     }
   }
 
   return (
     <MainLayout>
-      <Box>
-        <HStack mb={6} justify="space-between">
-          <Text fontSize="2xl" fontWeight="bold">
-            {t('nav.messages')}
-          </Text>
-          <Button colorPalette="blue" size="sm" onClick={() => setNewMessageOpen(true)}>
-            <FiSend />
-            <Text ml={2}>{t('messages.newMessageButton')}</Text>
-          </Button>
-        </HStack>
+      <Container maxW="container.xl">
+        <VStack gap={6} align="stretch">
+          <Heading size="lg">{t('nav.messages')}</Heading>
 
-        <HStack align="start" gap={4}>
-          {/* Threads list */}
-          <VStack gap={2} align="stretch" w={{ base: '40%', md: '30%' }}>
-            {threads.map((thread) => (
-              <Box
-                key={thread.id}
-                onClick={() => setActiveThreadId(thread.id)}
-                cursor="pointer"
-                transition="all 0.2s"
-                _hover={{ shadow: 'md' }}
-                bg={activeThreadId === thread.id ? 'blue.50' : 'white'}
-                borderLeft={activeThreadId === thread.id ? '4px solid' : 'none'}
-                borderLeftColor="blue.500"
-                p={3}
-                borderRadius="lg"
-                borderWidth="1px"
-                borderColor="gray.200"
-              >
-                <HStack justify="space-between">
-                  <Text fontWeight="semibold">{thread.id}</Text>
-                  <Text fontSize="xs" color="gray.500">{new Date(thread.lastMessageAt).toLocaleString('ru-RU')}</Text>
+          <VStack gap={4} align="stretch" minH="600px">
+            {/* Search companies section */}
+            <Box borderWidth="1px" borderRadius="lg" p={4} bg="gray.50">
+              <VStack gap={3} align="stretch">
+                <Text fontSize="sm" fontWeight="semibold" color="gray.600">
+                  {t('messages.find_company') || 'Найти компанию'}
+                </Text>
+                <HStack gap={2} bg="white" p={2} borderRadius="md" borderWidth="1px">
+                  <Box as={FiSearch} color="gray.400" />
+                  <Input 
+                    placeholder={t('common:buttons.search') || 'Поиск'}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    border="none"
+                    _focus={{ boxShadow: 'none' }}
+                    size="sm"
+                  />
                 </HStack>
-                <Text fontSize="sm" color="gray.600" lineClamp={2}>{thread.lastMessage}</Text>
-              </Box>
-            ))}
-          </VStack>
 
-          {/* Conversation */}
-          <VStack gap={3} align="stretch" flex={1}>
-            <HStack justify="space-between">
-              <Text fontWeight="bold">{activeThread ? activeThread.id : t('labels.no_data')}</Text>
-            </HStack>
-            <Separator />
-            <Box overflowY="auto" maxH="420px" w="100%">
-              <VStack gap={2} align="stretch" p={1}>
-                {messages.map((m) => (
-                  <Box key={m.id} alignSelf={m.senderCompanyId === myCompanyId ? 'flex-end' : 'flex-start'} maxW="80%">
-                    <Box bg={m.senderCompanyId === myCompanyId ? 'blue.100' : 'gray.100'} p={3} borderRadius="md">
-                      <Text fontSize="sm">{m.text}</Text>
-                      <Text fontSize="xs" color="gray.500" mt={1}>{new Date(m.timestamp).toLocaleTimeString('ru-RU')}</Text>
-                    </Box>
-                  </Box>
-                ))}
+                {/* Search results */}
+                {searchQuery && filteredCompanies.length > 0 && (
+                  <VStack gap={2} align="stretch" maxH="200px" overflowY="auto">
+                    {filteredCompanies.map((c: any) => (
+                      <Button
+                        key={c.id}
+                        variant="ghost"
+                        justifyContent="flex-start"
+                        onClick={() => handleSelectCompany(c.id)}
+                        size="sm"
+                      >
+                        {c.shortName || c.fullName}
+                      </Button>
+                    ))}
+                  </VStack>
+                )}
               </VStack>
             </Box>
 
-            <HStack>
-              <Input placeholder={t('messages.placeholder')} value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }} />
-              <Button colorPalette="blue" onClick={handleSend} disabled={!text.trim()} loading={isLoading}>
-                <FiSend />
-                <Text ml={2}>{t('messages.newMessage')}</Text>
-              </Button>
-            </HStack>
-          </VStack>
-        </HStack>
+            {/* Main chat or empty state */}
+            {activeThreadId ? (
+              <VStack gap={4} align="stretch" flex={1}>
+                {/* Header */}
+                <HStack justify="space-between" borderBottomWidth="1px" pb={3}>
+                  <Text fontWeight="bold" fontSize="md">
+                    {companyOptions?.companies?.find((c: any) => c.id === activeCompanyId)?.shortName || activeCompanyId}
+                  </Text>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setActiveThreadId(null)}
+                  >
+                    <FiX />
+                  </Button>
+                </HStack>
 
-        {messages.length === 0 && (
-          <VStack gap={4} py={12}>
-            <Box as={FiMail} w={16} h={16} color="gray.400" />
-            <Text fontSize="lg" color="gray.500">
-              {t('messages.no_messages')}
-            </Text>
-            <Text fontSize="sm" color="gray.400" textAlign="center">
-              {t('messages.no_threads')}
-            </Text>
-          </VStack>
-        )}
-      </Box>
+                {/* Messages */}
+                <Box
+                  overflowY="auto"
+                  flex={1}
+                  w="100%"
+                  css={{
+                    '&::-webkit-scrollbar': { width: '6px' },
+                    '&::-webkit-scrollbar-track': { bg: 'transparent' },
+                    '&::-webkit-scrollbar-thumb': { bg: '#cbd5e0', borderRadius: '3px' },
+                  }}
+                >
+                  <VStack gap={3} align="stretch" p={4}>
+                    {messages.length > 0 ? (
+                      messages.map((m: any) => (
+                        <Box
+                          key={m.id || m._id}
+                          alignSelf={m.senderCompanyId === myCompanyId ? 'flex-end' : 'flex-start'}
+                          maxW="85%"
+                        >
+                          <Box
+                            bg={m.senderCompanyId === myCompanyId ? 'brand.500' : 'gray.100'}
+                            color={m.senderCompanyId === myCompanyId ? 'white' : 'gray.900'}
+                            p={3}
+                            borderRadius="md"
+                            shadow="sm"
+                          >
+                            <Text fontSize="sm">{m.text}</Text>
+                            <Text fontSize="xs" opacity={0.7} mt={1}>
+                              {new Date(m.timestamp).toLocaleTimeString('ru-RU')}
+                            </Text>
+                          </Box>
+                        </Box>
+                      ))
+                    ) : (
+                      <Box textAlign="center" py={8} color="gray.400">
+                        <Text fontSize="sm">{t('messages.no_messages')}</Text>
+                      </Box>
+                    )}
+                  </VStack>
+                </Box>
 
-      {/* New Message Dialog */}
-      <Dialog.Root open={newMessageOpen} onOpenChange={(details) => setNewMessageOpen(details.open)}>
-        <Dialog.Backdrop />
-        {/* @ts-ignore */}
-        <Dialog.Positioner>
-          {/* @ts-ignore */}
-          <Dialog.Content>
-            {/* @ts-ignore */}
-            <Dialog.Header>
-              {/* @ts-ignore */}
-              <Dialog.Title>{t('messages.newMessageButton')}</Dialog.Title>
-              <Dialog.CloseTrigger />
-            </Dialog.Header>
-            <Dialog.Body>
-              <VStack gap={4} align="stretch">
-                {/* @ts-ignore */}
-                <Field.Root required>
-                  {/* @ts-ignore */}
-                  <Field.Label>{t('common:labels.company')}</Field.Label>
-                  <Input 
-                    placeholder={t('common:labels.company')}
-                    value={selectedCompanyName}
-                    onClick={() => {
-                      // Show list of companies - simplified version
-                      const companyList = companyOptions?.companies || []
-                      if (companyList.length > 0) {
-                        const first = companyList[0]
-                        setSelectedCompanyId(first.id)
-                        setSelectedCompanyName(first.name)
-                      }
-                    }}
-                    readOnly
-                  />
-                </Field.Root>
-                {/* @ts-ignore */}
-                <Field.Root required>
-                  {/* @ts-ignore */}
-                  <Field.Label>{t('common:labels.message')}</Field.Label>
-                  <Textarea 
-                    placeholder={t('messages.placeholder')}
+                {/* Input */}
+                <HStack gap={2}>
+                  <Textarea
+                    placeholder={t('messages.placeholder') || 'Введите сообщение...'}
                     value={messageText}
                     onChange={(e) => setMessageText(e.target.value)}
-                    minH="150px"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault()
+                        handleSend()
+                      }
+                    }}
+                    minH="80px"
+                    maxH="120px"
                     resize="none"
                   />
-                </Field.Root>
+                  <Button
+                    colorPalette="brand"
+                    onClick={handleSend}
+                    disabled={!messageText.trim()}
+                    loading={isSending}
+                    alignSelf="flex-end"
+                    minH="80px"
+                  >
+                    {t('messages.send') || 'Отправить'}
+                  </Button>
+                </HStack>
               </VStack>
-            </Dialog.Body>
-            {/* @ts-ignore */}
-            <Dialog.Footer>
-              <HStack gap={3} justify="flex-end">
-                <Button 
-                  variant="outline" 
-                  onClick={() => setNewMessageOpen(false)}
-                >
-                  {t('buttons.cancel')}
-                </Button>
-                <Button
-                  colorPalette="blue"
-                  onClick={handleSendNewMessage}
-                  loading={isLoading}
-                >
-                  {t('messages.send')}
-                </Button>
-              </HStack>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
+            ) : (
+              <Flex
+                flex={1}
+                justify="center"
+                align="center"
+                color="gray.400"
+                borderWidth="1px"
+                borderRadius="lg"
+                direction="column"
+                gap={3}
+              >
+                <Text fontSize="lg">{t('messages.select_company') || 'Выберите компанию для начала диалога'}</Text>
+              </Flex>
+            )}
+
+            {/* Conversation history */}
+            <Box borderTopWidth="1px" pt={4}>
+              <Text fontSize="sm" fontWeight="semibold" color="gray.600" mb={3}>
+                {t('messages.history') || 'История переписок'}
+              </Text>
+              <VStack gap={2} align="stretch" maxH="200px" overflowY="auto">
+                {conversationHistory.length > 0 ? (
+                  conversationHistory.map(({ companyId, company, thread, hasUnread }) => (
+                    <Box
+                      key={companyId}
+                      onClick={() => handleSelectCompany(companyId)}
+                      cursor="pointer"
+                      p={2}
+                      borderRadius="md"
+                      bg={activeCompanyId === companyId ? 'brand.50' : 'white'}
+                      borderWidth="1px"
+                      borderColor={activeCompanyId === companyId ? 'brand.200' : 'gray.200'}
+                      transition="all 0.2s"
+                      _hover={{ shadow: 'md', borderColor: 'brand.200' }}
+                    >
+                      <HStack justify="space-between" gap={2}>
+                        <VStack align="start" gap={0} flex={1} minW={0}>
+                          <HStack gap={2}>
+                            <Text fontWeight="medium" fontSize="sm" noOfLines={1}>
+                              {company?.shortName || companyId}
+                            </Text>
+                            {hasUnread && (
+                              <Badge colorPalette="red" variant="solid" fontSize="xs">
+                                •
+                              </Badge>
+                            )}
+                          </HStack>
+                          <Text fontSize="xs" color="gray.500" noOfLines={1}>
+                            {thread.lastMessage || 'Нет сообщений'}
+                          </Text>
+                        </VStack>
+                        <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                          {thread.lastMessageAt 
+                            ? new Date(thread.lastMessageAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+                            : ''}
+                        </Text>
+                      </HStack>
+                    </Box>
+                  ))
+                ) : (
+                  <Box p={3} textAlign="center" color="gray.400">
+                    <Text fontSize="sm">{t('messages.no_threads')}</Text>
+                  </Box>
+                )}
+              </VStack>
+            </Box>
+          </VStack>
+        </VStack>
+      </Container>
     </MainLayout>
   )
 }

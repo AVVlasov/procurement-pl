@@ -25,58 +25,64 @@ const App = () => {
       <BrowserRouter basename="/procurement-pl">
         <Provider>
           {/* <ErrorBoundary> */}
-            <Toaster />
-              <Routes>
-                {/* Public routes */}
-                <Route path="/auth/login" element={<Login />} />
-                <Route path="/auth/register" element={<Register />} />
-                <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+          <Toaster />
+          <Routes>
+            {/* Public routes */}
+            <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
+            <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
                 
-                {/* Protected routes */}
-                <Route path="/" element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } />
+            {/* Protected routes */}
+            <Route path="/" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/dashboard" element={
-                  <ProtectedRoute>
-                    <DashboardPage />
-                  </ProtectedRoute>
-                } />
+            <Route path="/dashboard" element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/company/profile" element={
-                  <ProtectedRoute>
-                    <CompanyProfile />
-                  </ProtectedRoute>
-                } />
+            <Route path="/company/profile" element={
+              <ProtectedRoute>
+                <CompanyProfile />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/search" element={
-                  <ProtectedRoute>
-                    <SearchPage />
-                  </ProtectedRoute>
-                } />
+            <Route path="/company/:id" element={
+              <ProtectedRoute>
+                <CompanyProfile />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/messages" element={
-                  <ProtectedRoute>
-                    <MessagesPage />
-                  </ProtectedRoute>
-                } />
+            <Route path="/search" element={
+              <ProtectedRoute>
+                <SearchPage />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/requests" element={
-                  <ProtectedRoute>
-                    <RequestsPage />
-                  </ProtectedRoute>
-                } />
+            <Route path="/messages" element={
+              <ProtectedRoute>
+                <MessagesPage />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="/settings" element={
-                  <ProtectedRoute>
-                    <SettingsPage />
-                  </ProtectedRoute>
-                } />
+            <Route path="/requests" element={
+              <ProtectedRoute>
+                <RequestsPage />
+              </ProtectedRoute>
+            } />
                 
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Routes>
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <SettingsPage />
+              </ProtectedRoute>
+            } />
+                
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
           {/* </ErrorBoundary> */}
         </Provider>
       </BrowserRouter>

@@ -150,8 +150,8 @@ export const Register: React.FC = () => {
                       justifyContent="center"
                       backgroundColor={
                         isPassed ? 'green.500' : 
-                        isCurrent ? 'orange.500' : 
-                        'gray.200'
+                          isCurrent ? 'orange.500' : 
+                            'gray.200'
                       }
                       color={isPassed || isCurrent ? 'white' : 'gray.600'}
                       fontWeight="bold"

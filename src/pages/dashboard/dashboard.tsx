@@ -144,7 +144,7 @@ export const DashboardPage = () => {
           />
           <StatCard
             title={t('stats.rating')}
-            value={stats?.rating || '0.0'}
+            value={stats?.rating ? stats.rating.toFixed(2) : '0.00'}
             icon={FiStar}
             colorPalette="yellow"
           />

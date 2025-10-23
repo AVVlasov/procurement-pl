@@ -1,6 +1,7 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import type { Company } from './companiesApi'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
 
 export interface SearchParams {
   query?: string;
@@ -73,12 +74,13 @@ export const searchApi = createApi({
   baseQuery: fetchBaseQuery({ 
     baseUrl: `${URLs.apiUrl}/search`,
     paramsSerializer: serializeParams,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem('accessToken');
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState() as RootState | undefined
+      const token = state?.auth?.accessToken
       if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+        headers.set('authorization', `Bearer ${token}`)
       }
-      return headers;
+      return headers
     }
   }),
   tagTypes: ['Search', 'SavedSearch', 'History'],

@@ -1,5 +1,19 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
+
+// Base query with authorization
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${URLs.apiUrl}`,
+  prepareHeaders: (headers, { getState }) => {
+    const state = getState() as RootState | undefined
+    const token = state?.auth?.accessToken
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`)
+    }
+    return headers
+  },
+})
 
 export interface MessageThread {
   id: string
@@ -18,7 +32,7 @@ export interface MessageItem {
 
 export const messagesApi = createApi({
   reducerPath: 'messagesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}` }),
+  baseQuery: baseQuery,
   tagTypes: ['Messages'],
   endpoints: (builder) => ({
     getThreads: builder.query<MessageThread[], void>({

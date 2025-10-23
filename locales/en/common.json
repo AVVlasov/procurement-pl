@@ -30,7 +30,9 @@
     "company": "Company",
     "title": "Title",
     "description": "Description",
-    "message": "Message"
+    "message": "Message",
+    "actions": "Actions",
+    "fill_required_fields": "Please fill in all required fields"
   },
   "errors": {
     "required_field": "This field is required",
@@ -74,7 +76,10 @@
     "sent_successfully": "Message sent successfully",
     "no_messages": "No messages",
     "no_threads": "No conversations",
-    "send": "Send"
+    "send": "Send",
+    "select_company": "Select a company to start a conversation",
+    "find_company": "Find a company",
+    "history": "Conversation history"
   },
   "buy": {
     "title": "I Buy",
@@ -97,7 +102,7 @@
     "nameColumn": "Name",
     "typeColumn": "Type",
     "sizeColumn": "Size",
-    "acceptsColumn": "Accepts",
+    "acceptsColumn": "Acceptances",
     "actionsColumn": "Actions",
     "acceptButton": "Accept",
     "deleteButton": "Delete",
@@ -117,8 +122,15 @@
     "errorStatus": "Error",
     "companyLabel": "Company",
     "dateLabel": "Date",
-    "noDocsMessage": "No documents",
-    "noDocsDescription": "Your procurement documents will be displayed here"
+    "noDocsMessage": "No Documents",
+    "noDocsDescription": "Your purchase documents will be displayed here",
+    "productsTab": "Products",
+    "requestsTab": "Requests",
+    "acceptancesTab": "Acceptances",
+    "bulkTab": "Distribution",
+    "productsDescription": "List of products you offer",
+    "productsEmpty": "Products will be displayed here",
+    "select_file": "Please select a file"
   },
   "report": {
     "title": "Final Report",

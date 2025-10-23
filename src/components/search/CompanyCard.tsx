@@ -107,7 +107,7 @@ export const CompanyCard = ({
           {company.rating && (
             <Flex gap={2} fontSize="sm" align="center">
               <Box as={FiStar} color="yellow.500" />
-              <Text fontWeight="bold">{company.rating.toFixed(1)}</Text>
+              <Text fontWeight="bold">{company.rating.toFixed(2)}</Text>
             </Flex>
           )}
           {company.legalAddress && (

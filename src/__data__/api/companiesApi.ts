@@ -1,5 +1,19 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
+
+// Base query with authorization
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${URLs.apiUrl}/companies`,
+  prepareHeaders: (headers, { getState }) => {
+    const state = getState() as RootState | undefined
+    const token = state?.auth?.accessToken
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`)
+    }
+    return headers
+  },
+})
 
 export interface Company {
   id: string;
@@ -38,12 +52,17 @@ export interface CompanyStats {
 
 export const companiesApi = createApi({
   reducerPath: 'companiesApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/companies` }),
+  baseQuery: baseQuery,
   tagTypes: ['Company', 'Stats', 'CompanyExperience', 'CompanyReviews'],
   endpoints: (builder) => ({
     getCompany: builder.query<Company, string>({
       query: (id) => `/${id}`,
       providesTags: (result, error, id) => [{ type: 'Company', id }],
+    }),
+    
+    getMyCompany: builder.query<Company, void>({
+      query: () => '/my/info',
+      providesTags: ['Company'],
     }),
     
     updateCompany: builder.mutation<Company, { id: string; data: Partial<Company> }>({
@@ -93,7 +112,7 @@ export const companiesApi = createApi({
       providesTags: (result, error, companyId) => [{ type: 'CompanyExperience', id: companyId }],
     }),
 
-    addCompanyExperience: builder.mutation<{
+    createCompanyExperience: builder.mutation<{
       id: string;
       confirmed: boolean;
       customer: string;
@@ -112,18 +131,18 @@ export const companiesApi = createApi({
       invalidatesTags: (result, error, { companyId }) => [{ type: 'CompanyExperience', id: companyId }],
     }),
 
-    updateCompanyExperience: builder.mutation<any, { companyId: string; expId: string; data: any }>({
-      query: ({ companyId, expId, data }) => ({
-        url: `/${companyId}/experience/${expId}`,
+    updateCompanyExperience: builder.mutation<any, { companyId: string; experienceId: string; data: any }>({
+      query: ({ companyId, experienceId, data }) => ({
+        url: `/${companyId}/experience/${experienceId}`,
         method: 'PUT',
         body: data,
       }),
       invalidatesTags: (result, error, { companyId }) => [{ type: 'CompanyExperience', id: companyId }],
     }),
 
-    deleteCompanyExperience: builder.mutation<void, { companyId: string; expId: string }>({
-      query: ({ companyId, expId }) => ({
-        url: `/${companyId}/experience/${expId}`,
+    deleteCompanyExperience: builder.mutation<void, { companyId: string; experienceId: string }>({
+      query: ({ companyId, experienceId }) => ({
+        url: `/${companyId}/experience/${experienceId}`,
         method: 'DELETE',
       }),
       invalidatesTags: (result, error, { companyId }) => [{ type: 'CompanyExperience', id: companyId }],
@@ -149,13 +168,14 @@ export const companiesApi = createApi({
 
 export const {
   useGetCompanyQuery,
+  useGetMyCompanyQuery,
   useUpdateCompanyMutation,
   useGetCompanyStatsQuery,
   useUploadLogoMutation,
   useCheckINNQuery,
   useLazyCheckINNQuery,
   useGetCompanyExperienceQuery,
-  useAddCompanyExperienceMutation,
+  useCreateCompanyExperienceMutation,
   useUpdateCompanyExperienceMutation,
   useDeleteCompanyExperienceMutation,
   useGetCompanyReviewsQuery,

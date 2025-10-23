@@ -3,7 +3,44 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const Company = require('../models/Company');
 
-// GET /search - Поиск компаний (с использованием MongoDB)
+// GET /search/recommendations - получить рекомендации компаний (ДОЛЖЕН быть ПЕРЕД /*)
+router.get('/recommendations', verifyToken, async (req, res) => {
+  try {
+    // Получить компанию пользователя, чтобы исключить её из результатов
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    
+    let filter = {};
+    if (user && user.companyId) {
+      filter._id = { $ne: user.companyId };
+    }
+
+    const companies = await Company.find(filter)
+      .sort({ rating: -1 })
+      .limit(5);
+
+    const recommendations = companies.map(company => ({
+      id: company._id.toString(),
+      name: company.fullName || company.shortName,
+      industry: company.industry,
+      logo: company.logo,
+      matchScore: Math.floor(Math.random() * 30 + 70), // 70-100
+      reason: 'Matches your search criteria'
+    }));
+
+    console.log('[Search] Returned recommendations:', recommendations.length);
+
+    res.json(recommendations);
+  } catch (error) {
+    console.error('[Search] Recommendations error:', error.message);
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: error.message 
+    });
+  }
+});
+
+// GET /search - Поиск компаний
 router.get('/', verifyToken, async (req, res) => {
   try {
     const { 
@@ -17,38 +54,50 @@ router.get('/', verifyToken, async (req, res) => {
       sortOrder = 'desc'
     } = req.query;
 
-    console.log('[Search] Query:', { query, page, limit });
-
-    // Построение query для MongoDB
-    let mongoQuery = {};
+    // Получить компанию пользователя, чтобы исключить её из результатов
+    const User = require('../models/User');
+    const user = await User.findById(req.userId);
+    
+    // Начальный фильтр: исключить собственную компанию
+    let filters = [];
+    
+    if (user && user.companyId) {
+      filters.push({ _id: { $ne: user.companyId } });
+    }
 
     // Текстовый поиск
     if (query && query.trim()) {
-      mongoQuery.$or = [
-        { fullName: { $regex: query, $options: 'i' } },
-        { shortName: { $regex: query, $options: 'i' } },
-        { slogan: { $regex: query, $options: 'i' } },
-        { industry: { $regex: query, $options: 'i' } }
-      ];
+      const q = query.toLowerCase();
+      filters.push({
+        $or: [
+          { fullName: { $regex: q, $options: 'i' } },
+          { shortName: { $regex: q, $options: 'i' } },
+          { slogan: { $regex: q, $options: 'i' } },
+          { industry: { $regex: q, $options: 'i' } }
+        ]
+      });
     }
 
     // Фильтр по рейтингу
     if (minRating) {
       const rating = parseFloat(minRating);
       if (rating > 0) {
-        mongoQuery.rating = { $gte: rating };
+        filters.push({ rating: { $gte: rating } });
       }
     }
 
     // Фильтр по отзывам
     if (hasReviews === 'true') {
-      mongoQuery.verified = true;
+      filters.push({ verified: true });
     }
 
     // Фильтр по акцептам
     if (hasAcceptedDocs === 'true') {
-      mongoQuery.verified = true;
+      filters.push({ verified: true });
     }
+
+    // Комбинировать все фильтры
+    let filter = filters.length > 0 ? { $and: filters } : {};
 
     // Пагинация
     const pageNum = parseInt(page) || 1;
@@ -56,29 +105,28 @@ router.get('/', verifyToken, async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     // Сортировка
-    let sortObj = { rating: -1 };
+    let sortOptions = {};
     if (sortBy === 'name') {
-      sortObj = { fullName: 1 };
-    }
-    if (sortOrder === 'asc') {
-      Object.keys(sortObj).forEach(key => {
-        sortObj[key] = sortObj[key] === -1 ? 1 : -1;
-      });
+      sortOptions.fullName = sortOrder === 'asc' ? 1 : -1;
+    } else {
+      sortOptions.rating = sortOrder === 'asc' ? 1 : -1;
     }
 
-    // Запрос к MongoDB
-    const companies = await Company.find(mongoQuery)
-      .limit(limitNum)
+    const total = await Company.countDocuments(filter);
+    const companies = await Company.find(filter)
+      .sort(sortOptions)
       .skip(skip)
-      .sort(sortObj)
-      .lean();
+      .limit(limitNum);
 
-    const total = await Company.countDocuments(mongoQuery);
+    const paginatedResults = companies.map(c => ({
+      ...c.toObject(),
+      id: c._id
+    }));
 
-    console.log('[Search] Returned', companies.length, 'companies');
+    console.log('[Search] Returned', paginatedResults.length, 'companies');
 
     res.json({
-      companies,
+      companies: paginatedResults,
       total,
       page: pageNum,
       totalPages: Math.ceil(total / limitNum)

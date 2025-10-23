@@ -17,6 +17,13 @@ import {
 import { useTranslation } from 'react-i18next'
 import { FiStar, FiMessageSquare } from 'react-icons/fi'
 import { useToast } from '../../../hooks/useToast'
+import { useGetCompanyReviewsQuery, useCreateReviewMutation } from '../../../__data__/api/reviewsApi'
+import { useAuth } from '../../../hooks/useAuth'
+
+interface ReviewsTabProps {
+  isOwnCompany?: boolean
+  companyId?: string
+}
 
 interface Review {
   id: string
@@ -31,53 +38,57 @@ interface Review {
   verified: boolean
 }
 
-// Mock data
-const mockReviews: Review[] = [
-  {
-    id: '1',
-    author: {
-      name: 'Иван Петров',
-      company: 'ООО "Партнер"',
-      avatar: '',
-    },
-    rating: 5,
-    comment: 'Отличная компания! Все сроки соблюдены, качество на высоте.',
-    date: '2025-01-15',
-    verified: true,
-  },
-  {
-    id: '2',
-    author: {
-      name: 'Мария Сидорова',
-      company: 'ЗАО "Инвест"',
-      avatar: '',
-    },
-    rating: 4,
-    comment: 'Хорошее сотрудничество, рекомендую.',
-    date: '2024-12-20',
-    verified: true,
-  },
-]
-
-export const ReviewsTab = () => {
+export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) => {
   const { t } = useTranslation('company')
   const toast = useToast()
+  const { company } = useAuth()
   const { open, onOpen, onClose } = useDisclosure()
-  const [reviews] = useState<Review[]>(mockReviews)
   const [rating, setRating] = useState(0)
   const [comment, setComment] = useState('')
 
+  // Fetch reviews for the company
+  const { data: reviewsData = [], isLoading } = useGetCompanyReviewsQuery(companyId || '', { skip: !companyId })
+  const [createReview, { isLoading: isSubmitting }] = useCreateReviewMutation()
+
+  // Transform API data to UI format
+  const reviews: Review[] = (reviewsData || []).map((review: any) => ({
+    id: review._id || review.id,
+    author: {
+      name: review.authorName,
+      company: review.authorCompany,
+      avatar: '',
+    },
+    rating: review.rating,
+    comment: review.comment,
+    date: review.date || review.createdAt,
+    verified: review.verified,
+  }))
+
   const averageRating =
     reviews.length > 0
-      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(2)
       : '0.0'
 
-  const handleSubmitReview = () => {
-    // TODO: Implement review submission
-    toast.success(t('common:labels.success'), 'Отзыв успешно отправлен')
-    setRating(0)
-    setComment('')
-    onClose()
+  const handleSubmitReview = async () => {
+    if (!rating || !comment.trim() || !companyId) {
+      toast.warning(t('common:labels.fill_required_fields') || 'Заполните все поля')
+      return
+    }
+
+    try {
+      await createReview({
+        companyId,
+        rating,
+        comment: comment.trim(),
+      }).unwrap()
+
+      toast.success(t('common:labels.success') || 'Отзыв успешно отправлен')
+      setRating(0)
+      setComment('')
+      onClose()
+    } catch (error) {
+      toast.error(t('common:errors.server_error') || 'Ошибка при отправке отзыва')
+    }
   }
 
   const RatingStars = ({ value, onChange }: { value: number; onChange?: (v: number) => void }) => (
@@ -141,13 +152,15 @@ export const ReviewsTab = () => {
       {/* Header */}
       <HStack justify="space-between">
         <Heading size="lg">{t('reviews.title')}</Heading>
-        <Button
-          colorPalette="brand"
-          onClick={onOpen}
-        >
-          <FiMessageSquare />
-          {t('reviews.write_review')}
-        </Button>
+        {!isOwnCompany && (
+          <Button
+            colorPalette="brand"
+            onClick={onOpen}
+          >
+            <FiMessageSquare />
+            {t('reviews.write_review')}
+          </Button>
+        )}
       </HStack>
 
       {/* Rating Summary */}
@@ -176,7 +189,11 @@ export const ReviewsTab = () => {
       </Flex>
 
       {/* Reviews List */}
-      {reviews.length > 0 ? (
+      {isLoading ? (
+        <Flex justify="center" py={8}>
+          <Text color="gray.500">{t('common:labels.loading')}</Text>
+        </Flex>
+      ) : reviews.length > 0 ? (
         <VStack gap={4} align="stretch">
           {reviews.map((review) => (
             <ReviewCard key={review.id} review={review} />
@@ -245,6 +262,7 @@ export const ReviewsTab = () => {
                 colorPalette="brand"
                 onClick={handleSubmitReview}
                 disabled={rating === 0 || comment.trim() === ''}
+                loading={isSubmitting}
               >
                 {t('reviews.submit')}
               </Button>

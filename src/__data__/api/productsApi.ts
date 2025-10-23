@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
 
 export interface Product {
   id: string;
@@ -7,13 +8,16 @@ export interface Product {
   name: string;
   category: string;
   description: string;
-  type: 'sell' | 'buy'; // Продаю или покупаю
+  type: 'sell' | 'buy';
   productUrl?: string;
+  price?: string;
+  unit?: string;
+  minOrder?: string;
   files?: Array<{
     id: string;
     name: string;
     url: string;
-    type: string; // 'commercial-offer' | 'technical-specs' | 'contract' | 'other'
+    type: string;
   }>;
   createdAt: string;
   updatedAt: string;
@@ -25,6 +29,10 @@ export interface CreateProductRequest {
   description: string;
   type: 'sell' | 'buy';
   productUrl?: string;
+  price?: string;
+  unit?: string;
+  minOrder?: string;
+  companyId?: string;
 }
 
 export interface UploadFileRequest {
@@ -37,18 +45,19 @@ export const productsApi = createApi({
   reducerPath: 'productsApi',
   baseQuery: fetchBaseQuery({ 
     baseUrl: `${URLs.apiUrl}/products`,
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem('accessToken');
+    prepareHeaders: (headers, { getState }) => {
+      const state = getState() as RootState | undefined
+      const token = state?.auth?.accessToken
       if (token) {
-        headers.set('authorization', `Bearer ${token}`);
+        headers.set('authorization', `Bearer ${token}`)
       }
-      return headers;
+      return headers
     }
   }),
   tagTypes: ['Product', 'ProductFile'],
   endpoints: (builder) => ({
-    getProducts: builder.query<Product[], { companyId: string }>({
-      query: ({ companyId }) => `?companyId=${companyId}`,
+    getProducts: builder.query<Product[], void>({
+      query: () => '',
       providesTags: (result) =>
         result
           ? [
@@ -63,7 +72,7 @@ export const productsApi = createApi({
       providesTags: (result, error, id) => [{ type: 'Product', id }],
     }),
     
-    createProduct: builder.mutation<Product, CreateProductRequest & { companyId: string }>({
+    createProduct: builder.mutation<Product, CreateProductRequest>({
       query: (data) => ({
         url: '',
         method: 'POST',
@@ -78,7 +87,10 @@ export const productsApi = createApi({
         method: 'PATCH',
         body: data,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Product', id }],
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Product', id },
+        { type: 'Product', id: 'LIST' }
+      ],
     }),
     
     deleteProduct: builder.mutation<void, string>({
@@ -86,7 +98,10 @@ export const productsApi = createApi({
         url: `/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'Product', id }],
+      invalidatesTags: (result, error, id) => [
+        { type: 'Product', id },
+        { type: 'Product', id: 'LIST' }
+      ],
     }),
     
     uploadFile: builder.mutation<{ file: Product['files'][0] }, UploadFileRequest>({
@@ -100,7 +115,10 @@ export const productsApi = createApi({
           body: formData,
         }
       },
-      invalidatesTags: (result, error, { productId }) => [{ type: 'Product', id: productId }],
+      invalidatesTags: (result, error, { productId }) => [
+        { type: 'Product', id: productId },
+        { type: 'Product', id: 'LIST' }
+      ],
     }),
     
     deleteFile: builder.mutation<void, { productId: string; fileId: string }>({
@@ -108,7 +126,10 @@ export const productsApi = createApi({
         url: `/${productId}/files/${fileId}`,
         method: 'DELETE',
       }),
-      invalidatesTags: (result, error, { productId }) => [{ type: 'Product', id: productId }],
+      invalidatesTags: (result, error, { productId }) => [
+        { type: 'Product', id: productId },
+        { type: 'Product', id: 'LIST' }
+      ],
     }),
   }),
 })
@@ -122,4 +143,3 @@ export const {
   useUploadFileMutation,
   useDeleteFileMutation,
 } = productsApi
-

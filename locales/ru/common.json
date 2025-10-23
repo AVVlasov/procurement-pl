@@ -30,7 +30,9 @@
     "company": "Компания",
     "title": "Название",
     "description": "Описание",
-    "message": "Сообщение"
+    "message": "Сообщение",
+    "actions": "Действия",
+    "fill_required_fields": "Заполните все обязательные поля"
   },
   "errors": {
     "required_field": "Это поле обязательно для заполнения",
@@ -74,7 +76,10 @@
     "sent_successfully": "Сообщение отправлено",
     "no_messages": "Нет сообщений",
     "no_threads": "Нет диалогов",
-    "send": "Отправить"
+    "send": "Отправить",
+    "select_company": "Выберите компанию для начала диалога",
+    "find_company": "Найти компанию",
+    "history": "История переписок"
   },
   "buy": {
     "title": "Я покупаю",
@@ -118,7 +123,14 @@
     "companyLabel": "Компания",
     "dateLabel": "Дата",
     "noDocsMessage": "Нет документов",
-    "noDocsDescription": "Здесь будут отображаться ваши документы для закупок"
+    "noDocsDescription": "Здесь будут отображаться ваши документы для закупок",
+    "productsTab": "Товары",
+    "requestsTab": "Заявки",
+    "acceptancesTab": "Акцепты",
+    "bulkTab": "Рассылка",
+    "productsDescription": "Список товаров, которые вы предлагаете",
+    "productsEmpty": "Товары будут отображены здесь",
+    "select_file": "Пожалуйста, выберите файл"
   },
   "report": {
     "title": "Итоговый отчет",

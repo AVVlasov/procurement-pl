@@ -8,7 +8,6 @@ const companySchema = new mongoose.Schema({
   shortName: String,
   inn: {
     type: String,
-    unique: true,
     sparse: true
   },
   ogrn: String,
@@ -46,6 +45,10 @@ const companySchema = new mongoose.Schema({
   productsNeeded: String,
   partnerIndustries: [String],
   partnerGeography: [String],
+  verified: {
+    type: Boolean,
+    default: false
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -54,6 +57,9 @@ const companySchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+}, { 
+  collection: 'companies',
+  minimize: false
 });
 
 // Индексы для поиска

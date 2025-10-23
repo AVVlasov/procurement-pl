@@ -20,14 +20,17 @@ import {
 import { useAuth } from '../../../hooks/useAuth'
 import { useToast } from '../../../hooks/useToast'
 
-export const LegalTab = () => {
+export const LegalTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId?: string; isOwnCompany?: boolean }) => {
   const { t } = useTranslation('company')
   const { user } = useAuth()
   const toast = useToast()
   const [isEditing, setIsEditing] = useState(false)
 
-  const { data: company, isLoading } = useGetCompanyQuery(user?.companyId || '', {
-    skip: !user?.companyId,
+  const finalCompanyId = propCompanyId || user?.companyId
+  const isEditingOwn = isOwnCompany !== false
+
+  const { data: company, isLoading } = useGetCompanyQuery(finalCompanyId || '', {
+    skip: !finalCompanyId,
   })
   const [updateCompany, { isLoading: isUpdating }] = useUpdateCompanyMutation()
 

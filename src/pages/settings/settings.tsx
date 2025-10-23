@@ -13,7 +13,7 @@ const SettingsPage = () => {
   const [emailUpdates, setEmailUpdates] = useState(false)
   const [language, setLanguage] = useState(i18n.language)
   const { company } = useAuth()
-  const companyId = company?.id || 'company-123'
+  const companyId = company?.id
   const [openAddExp, setOpenAddExp] = useState(false)
   const [createExperience, { isLoading: isAdding }] = useCreateExperienceMutation()
   const { success, error } = useToast()

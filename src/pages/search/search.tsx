@@ -26,10 +26,12 @@ import {
 } from '../../__data__/api/searchApi'
 import type { SearchParams, SearchResult } from '../../__data__/api/searchApi'
 import { useSendMessageMutation } from '../../__data__/api/messagesApi'
+import { useAuth } from '../../hooks/useAuth'
 
 export const SearchPage = () => {
   const { t } = useTranslation('search')
   const toast = useToast()
+  const { company } = useAuth()
   
   const [searchQuery, setSearchQuery] = useState('')
   const [useAI, setUseAI] = useState(false)
@@ -104,11 +106,21 @@ export const SearchPage = () => {
     if (!messageText.trim() || !selectedCompanyId) return
     
     try {
-      // Создаем thread ID на основе компаний
-      const threadId = `thread-${selectedCompanyId}-${Date.now()}`
+      const currentCompanyId = company?.id
+      
+      if (!currentCompanyId) {
+        toast.error(t('common:errors.server_error'))
+        return
+      }
+      
+      // Создаем thread ID на основе обеих компаний (в отсортированном порядке для консистентности)
+      const companyIds = [currentCompanyId, selectedCompanyId].sort()
+      const threadId = `thread-${companyIds[0]}-${companyIds[1]}`
+      
       await sendMessage({
         threadId,
         text: messageText,
+        senderCompanyId: currentCompanyId,
       }).unwrap()
       
       toast.success(t('common:messages.sent_successfully'))

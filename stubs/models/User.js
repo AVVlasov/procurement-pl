@@ -37,7 +37,13 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   }
+}, { 
+  collection: 'users',
+  minimize: false,
+  toObject: { versionKey: false }
 });
+
+userSchema.set('toObject', { virtuals: false, versionKey: false });
 
 // Хешировать пароль перед сохранением
 userSchema.pre('save', async function(next) {

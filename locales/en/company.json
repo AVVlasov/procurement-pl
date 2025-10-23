@@ -3,6 +3,7 @@
     "about": "About",
     "specialization": "Specialization",
     "legal": "Legal Info",
+    "experience": "Experience",
     "reviews": "Reviews"
   },
   "about": {
@@ -74,10 +75,26 @@
     "empty": "No experience records",
     "yes": "Yes",
     "no": "No",
+    "add": "Add Experience",
+    "edit": "Edit Experience",
     "sort": {
       "date": "By date",
       "customer": "By customer"
     }
+  },
+  "buy_products": {
+    "title": "Products (I Buy)",
+    "empty": "Add your first product to get started",
+    "add": "Add Product",
+    "add_new": "Add Product",
+    "edit": "Edit Product",
+    "name": "Name",
+    "name_placeholder": "Product name",
+    "description": "Description",
+    "description_placeholder": "Product description (min. 10 characters)",
+    "quantity": "Quantity",
+    "quantity_placeholder": "Quantity",
+    "unit": "Unit of measurement"
   }
 }
 

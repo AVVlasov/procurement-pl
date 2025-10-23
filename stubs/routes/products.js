@@ -1,130 +1,164 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
+const Product = require('../models/Product');
 
-// In-memory хранилище для продуктов/услуг (mock)
-let products = [];
+// Helper to transform _id to id
+const transformProduct = (doc) => {
+  if (!doc) return null;
+  const obj = doc.toObject ? doc.toObject() : doc;
+  return {
+    ...obj,
+    id: obj._id,
+    _id: undefined
+  };
+};
 
-// GET /products - Получить список продуктов/услуг компании
-router.get('/', verifyToken, (req, res) => {
+// GET /products - Получить список продуктов/услуг компании (текущего пользователя)
+router.get('/', verifyToken, async (req, res) => {
   try {
-    const { companyId } = req.query;
-    
-    if (!companyId) {
-      return res.status(400).json({ error: 'companyId is required' });
-    }
+    const companyId = req.user.companyId;
 
-    const companyProducts = products.filter(p => p.companyId === companyId);
-    res.json(companyProducts);
+    console.log('[Products] GET Fetching products for companyId:', companyId);
+    
+    const products = await Product.find({ companyId })
+      .sort({ createdAt: -1 })
+      .exec();
+
+    console.log('[Products] Found', products.length, 'products');
+    res.json(products.map(transformProduct));
   } catch (error) {
-    console.error('Get products error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Products] Get error:', error.message);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
 // POST /products - Создать продукт/услугу
-router.post('/', verifyToken, (req, res) => {
+router.post('/', verifyToken, async (req, res) => {
   try {
-    const { companyId, name, category, description, price, unit } = req.body;
+    const { name, category, description, type, productUrl, price, unit, minOrder } = req.body;
+    const companyId = req.user.companyId;
 
-    if (!companyId || !name) {
-      return res.status(400).json({ error: 'companyId and name are required' });
+    console.log('[Products] POST Creating product:', { name, category, type });
+
+    // Валидация
+    if (!name || !category || !description || !type) {
+      return res.status(400).json({ error: 'name, category, description, and type are required' });
     }
 
-    const newProduct = {
-      id: `prod-${Date.now()}`,
+    if (description.length < 20) {
+      return res.status(400).json({ error: 'Description must be at least 20 characters' });
+    }
+
+    const newProduct = new Product({
+      name: name.trim(),
+      category: category.trim(),
+      description: description.trim(),
+      type,
+      productUrl: productUrl || '',
       companyId,
-      name,
-      category: category || 'other',
-      description: description || '',
       price: price || '',
       unit: unit || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+      minOrder: minOrder || ''
+    });
 
-    products.push(newProduct);
+    const savedProduct = await newProduct.save();
+    console.log('[Products] Product created with ID:', savedProduct._id);
 
-    res.status(201).json(newProduct);
+    res.status(201).json(transformProduct(savedProduct));
   } catch (error) {
-    console.error('Create product error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Products] Create error:', error.message);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
 // PUT /products/:id - Обновить продукт/услугу
-router.put('/:id', verifyToken, (req, res) => {
+router.put('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const companyId = req.user.companyId;
 
-    const index = products.findIndex(p => p.id === id);
+    const product = await Product.findById(id);
 
-    if (index === -1) {
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const updatedProduct = {
-      ...products[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
+    // Проверить, что продукт принадлежит текущей компании
+    if (product.companyId !== companyId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
 
-    products[index] = updatedProduct;
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
 
-    res.json(updatedProduct);
+    console.log('[Products] Product updated:', id);
+    res.json(transformProduct(updatedProduct));
   } catch (error) {
-    console.error('Update product error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Products] Update error:', error.message);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
 // PATCH /products/:id - Частичное обновление продукта/услуги
-router.patch('/:id', verifyToken, (req, res) => {
+router.patch('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+    const companyId = req.user.companyId;
 
-    const index = products.findIndex(p => p.id === id);
+    const product = await Product.findById(id);
 
-    if (index === -1) {
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const updatedProduct = {
-      ...products[index],
-      ...updates,
-      updatedAt: new Date().toISOString()
-    };
+    if (product.companyId !== companyId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
 
-    products[index] = updatedProduct;
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { ...updates, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    );
 
-    res.json(updatedProduct);
+    console.log('[Products] Product patched:', id);
+    res.json(transformProduct(updatedProduct));
   } catch (error) {
-    console.error('Patch product error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Products] Patch error:', error.message);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
 // DELETE /products/:id - Удалить продукт/услугу
-router.delete('/:id', verifyToken, (req, res) => {
+router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
+    const companyId = req.user.companyId;
 
-    const index = products.findIndex(p => p.id === id);
+    const product = await Product.findById(id);
 
-    if (index === -1) {
+    if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    products.splice(index, 1);
+    if (product.companyId !== companyId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
 
+    await Product.findByIdAndDelete(id);
+
+    console.log('[Products] Product deleted:', id);
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
-    console.error('Delete product error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[Products] Delete error:', error.message);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 
 module.exports = router;
-

@@ -3,7 +3,6 @@ import {
   Box,
   Heading,
   VStack,
-  HStack,
   Text,
   Button,
   Avatar,
@@ -13,6 +12,7 @@ import {
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiArrowRight, FiMail, FiStar } from 'react-icons/fi'
+import { useNavigate } from 'react-router-dom'
 import { useGetRecommendationsQuery } from '../../__data__/api/searchApi'
 import { colors } from '../../utils/colorMode'
 
@@ -106,17 +106,16 @@ const RecommendationCard = ({
 
 export const AIRecommendations = () => {
   const { t } = useTranslation('dashboard')
+  const navigate = useNavigate()
   const { data: recommendations, isLoading } = useGetRecommendationsQuery()
   const bg = colors.bg.primary
 
   const handleContact = (id: string) => {
-    // TODO: Implement contact logic
-    console.log('Contact company:', id)
+    navigate(`/messages?companyId=${id}`)
   }
 
   const handleViewDetails = (id: string) => {
-    // TODO: Navigate to company profile
-    console.log('View company:', id)
+    navigate(`/company/${id}`)
   }
 
   return (
@@ -141,7 +140,7 @@ export const AIRecommendations = () => {
         </Flex>
       ) : recommendations && recommendations.length > 0 ? (
         <VStack gap={{ base: 3, md: 4 }} align="stretch">
-          {recommendations.slice(0, 3).map((company: any) => (
+          {recommendations.slice(0, 3).map((company) => (
             <RecommendationCard
               key={company.id}
               company={company}

@@ -22,16 +22,17 @@ const productSchema = new mongoose.Schema({
   },
   productUrl: String,
   companyId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Company',
-    required: true
+    type: String,
+    required: true,
+    index: true
   },
   price: String,
   unit: String,
   minOrder: String,
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
+    index: true
   },
   updatedAt: {
     type: Date,
@@ -42,5 +43,15 @@ const productSchema = new mongoose.Schema({
 // Индекс для поиска
 productSchema.index({ companyId: 1, type: 1 });
 productSchema.index({ name: 'text', description: 'text' });
+
+// Transform _id to id in JSON output
+productSchema.set('toJSON', {
+  transform: (doc, ret) => {
+    ret.id = ret._id;
+    delete ret._id;
+    delete ret.__v;
+    return ret;
+  }
+});
 
 module.exports = mongoose.model('Product', productSchema);

@@ -5,8 +5,9 @@ import { URLs } from '../urls'
 const baseQuery = fetchBaseQuery({
   baseUrl: URLs.apiUrl,
   prepareHeaders: (headers, { getState }) => {
-    // Get token from auth state
-    const token = (getState() as RootState).auth.accessToken
+    // Get token from auth state with fallback
+    const state = getState() as RootState | undefined
+    const token = state?.auth?.accessToken
     
     if (token) {
       headers.set('authorization', `Bearer ${token}`)
