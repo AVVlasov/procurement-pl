@@ -32,6 +32,41 @@ interface ProductFormData {
   productUrl?: string
 }
 
+interface ValidationErrors {
+  name?: string
+  category?: string
+  description?: string
+}
+
+const VALIDATION_RULES = {
+  description: {
+    minLength: 20,
+    maxLength: 500,
+  },
+}
+
+const validateProductForm = (formData: ProductFormData): ValidationErrors => {
+  const errors: ValidationErrors = {}
+
+  if (!formData.name.trim()) {
+    errors.name = 'Название обязательно'
+  }
+
+  if (!formData.category.trim()) {
+    errors.category = 'Категория обязательна'
+  }
+
+  if (!formData.description.trim()) {
+    errors.description = 'Описание обязательно'
+  } else if (formData.description.length < VALIDATION_RULES.description.minLength) {
+    errors.description = `Минимум ${VALIDATION_RULES.description.minLength} символов`
+  } else if (formData.description.length > VALIDATION_RULES.description.maxLength) {
+    errors.description = `Максимум ${VALIDATION_RULES.description.maxLength} символов`
+  }
+
+  return errors
+}
+
 export const SpecializationTab = () => {
   const { t } = useTranslation('company')
   const toast = useToast()
@@ -45,6 +80,7 @@ export const SpecializationTab = () => {
     type: 'sell',
     productUrl: '',
   })
+  const [errors, setErrors] = useState<ValidationErrors>({})
 
   const { data: products } = useGetProductsQuery()
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation()
@@ -74,6 +110,7 @@ export const SpecializationTab = () => {
         productUrl: '',
       })
     }
+    setErrors({})
     onOpen()
   }
 
@@ -86,10 +123,18 @@ export const SpecializationTab = () => {
       type: 'sell',
       productUrl: '',
     })
+    setErrors({})
     onClose()
   }
 
   const handleSave = async () => {
+    const validationErrors = validateProductForm(formData)
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      return
+    }
+
     try {
       if (editingProduct) {
         await updateProduct({
@@ -108,8 +153,6 @@ export const SpecializationTab = () => {
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Удалить продукт?')) return
-    
     try {
       await deleteProduct(id).unwrap()
       toast.success(t('common:labels.success'))
@@ -132,19 +175,23 @@ export const SpecializationTab = () => {
           <HStack>
             <IconButton
               aria-label="Edit"
-              icon={<FiEdit />}
               size="sm"
               variant="ghost"
               onClick={() => handleOpenModal(product.type, product)}
-            />
+              color="black"
+            >
+              <FiEdit />
+            </IconButton>
             <IconButton
               aria-label="Delete"
-              icon={<FiTrash2 />}
               size="sm"
               variant="ghost"
               colorPalette="red"
               onClick={() => handleDelete(product.id)}
-            />
+              color="black"
+            >
+              <FiTrash2 />
+            </IconButton>
           </HStack>
         </HStack>
         <Badge colorPalette="blue" w="fit-content">
@@ -249,24 +296,27 @@ export const SpecializationTab = () => {
             </Dialog.Header>
             <Dialog.Body>
               <VStack gap={4}>
-                <Field.Root required>
+                <Field.Root required invalid={!!errors.name}>
                   <Field.Label>{t('specialization.product_name')}</Field.Label>
                   <Input
                     value={formData.name}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({ ...formData, name: e.target.value })
-                    }
+                      if (errors.name) setErrors({ ...errors, name: undefined })
+                    }}
                   />
+                  {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
                 </Field.Root>
 
-                <Field.Root required>
+                <Field.Root required invalid={!!errors.category}>
                   <Field.Label>{t('specialization.category')}</Field.Label>
                   <NativeSelect.Root>
                     <NativeSelect.Field
                       value={formData.category}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setFormData({ ...formData, category: e.target.value })
-                      }
+                        if (errors.category) setErrors({ ...errors, category: undefined })
+                      }}
                       placeholder={t('common:labels.select')}
                     >
                       {PRODUCT_CATEGORIES.map((cat) => (
@@ -277,17 +327,33 @@ export const SpecializationTab = () => {
                     </NativeSelect.Field>
                     <NativeSelect.Indicator />
                   </NativeSelect.Root>
+                  {errors.category && <Field.ErrorText>{errors.category}</Field.ErrorText>}
                 </Field.Root>
 
-                <Field.Root required>
-                  <Field.Label>{t('specialization.description')}</Field.Label>
+                <Field.Root required invalid={!!errors.description}>
+                  <Field.Label>
+                    <HStack justify="space-between">
+                      <Text>{t('specialization.description')}</Text>
+                      <Text fontSize="xs" color={formData.description.length > VALIDATION_RULES.description.maxLength ? 'red.500' : 'gray.500'}>
+                        {formData.description.length}/{VALIDATION_RULES.description.maxLength}
+                      </Text>
+                    </HStack>
+                  </Field.Label>
                   <Textarea
                     value={formData.description}
-                    onChange={(e) =>
+                    onChange={(e) => {
                       setFormData({ ...formData, description: e.target.value })
-                    }
+                      if (errors.description) setErrors({ ...errors, description: undefined })
+                    }}
                     rows={4}
+                    placeholder={`Минимум ${VALIDATION_RULES.description.minLength} символов`}
                   />
+                  <HStack justify="space-between" fontSize="xs" mt={1}>
+                    <Text color="gray.500">
+                      Минимум: {VALIDATION_RULES.description.minLength} • Максимум: {VALIDATION_RULES.description.maxLength}
+                    </Text>
+                  </HStack>
+                  {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
                 </Field.Root>
 
                 <Field.Root>

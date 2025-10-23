@@ -28,6 +28,36 @@ interface BuyProductForm {
   unit: string
 }
 
+interface ValidationErrors {
+  name?: string
+  description?: string
+}
+
+const VALIDATION_RULES = {
+  description: {
+    minLength: 20,
+    maxLength: 500,
+  },
+}
+
+const validateBuyProductForm = (formData: BuyProductForm): ValidationErrors => {
+  const errors: ValidationErrors = {}
+
+  if (!formData.name.trim()) {
+    errors.name = 'Название обязательно'
+  }
+
+  if (!formData.description.trim()) {
+    errors.description = 'Описание обязательно'
+  } else if (formData.description.length < VALIDATION_RULES.description.minLength) {
+    errors.description = `Минимум ${VALIDATION_RULES.description.minLength} символов`
+  } else if (formData.description.length > VALIDATION_RULES.description.maxLength) {
+    errors.description = `Максимум ${VALIDATION_RULES.description.maxLength} символов`
+  }
+
+  return errors
+}
+
 export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId?: string; isOwnCompany?: boolean }) => {
   const { t } = useTranslation('company')
   const toast = useToast()
@@ -49,12 +79,14 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
     unit: 'шт',
   })
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [errors, setErrors] = useState<ValidationErrors>({})
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handleAddNew = () => {
     setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
     setSelectedFiles([])
     setEditingId(null)
+    setErrors({})
     setIsFormOpen(true)
   }
 
@@ -66,6 +98,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
       unit: product.unit,
     })
     setEditingId(product._id)
+    setErrors({})
     setIsFormOpen(true)
   }
 
@@ -77,8 +110,10 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
   }
 
   const handleSaveProduct = async () => {
-    if (!formData.name.trim() || !formData.description.trim()) {
-      toast.warning(t('common:labels.fill_required_fields') || 'Заполните обязательные поля')
+    const validationErrors = validateBuyProductForm(formData)
+
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
       return
     }
 
@@ -105,19 +140,18 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
       setIsFormOpen(false)
       setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
       setSelectedFiles([])
+      setErrors({})
     } catch (error) {
       toast.error(t('common:errors.server_error') || 'Ошибка при сохранении')
     }
   }
 
   const handleDeleteProduct = async (id: string) => {
-    if (window.confirm('Вы уверены, что хотите удалить этот товар?')) {
-      try {
-        await deleteProduct(id).unwrap()
-        toast.success(t('common:labels.success') || 'Товар удален')
-      } catch (error) {
-        toast.error(t('common:errors.server_error') || 'Ошибка при удалении')
-      }
+    try {
+      await deleteProduct(id).unwrap()
+      toast.success(t('common:labels.success') || 'Товар удален')
+    } catch (error) {
+      toast.error(t('common:errors.server_error') || 'Ошибка при удалении')
     }
   }
 
@@ -176,6 +210,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                             variant="outline"
                             onClick={() => handleEdit(product)}
                             title="Редактировать"
+                            color="black"
                           >
                             <FiEdit2 />
                           </IconButton>
@@ -186,6 +221,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                             onClick={() => handleDeleteProduct(product._id)}
                             title="Удалить"
                             loading={isDeleting}
+                            color="black"
                           >
                             <FiTrash2 />
                           </IconButton>
@@ -222,6 +258,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
           setIsFormOpen(false)
           setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
           setSelectedFiles([])
+          setErrors({})
         }
       }} size="lg">
         <Dialog.Backdrop />
@@ -235,23 +272,43 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
             </Dialog.Header>
             <Dialog.Body>
               <VStack gap={6}>
-                <Field.Root required>
+                <Field.Root required invalid={!!errors.name}>
                   <Field.Label>{t('buy_products.name') || 'Название'}</Field.Label>
                   <Input
                     placeholder={t('buy_products.name_placeholder') || 'Название товара'}
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, name: e.target.value })
+                      if (errors.name) setErrors({ ...errors, name: undefined })
+                    }}
                   />
+                  {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
                 </Field.Root>
 
-                <Field.Root required>
-                  <Field.Label>{t('buy_products.description') || 'Описание'}</Field.Label>
+                <Field.Root required invalid={!!errors.description}>
+                  <Field.Label>
+                    <HStack justify="space-between">
+                      <Text>{t('buy_products.description') || 'Описание'}</Text>
+                      <Text fontSize="xs" color={formData.description.length > VALIDATION_RULES.description.maxLength ? 'red.500' : 'gray.500'}>
+                        {formData.description.length}/{VALIDATION_RULES.description.maxLength}
+                      </Text>
+                    </HStack>
+                  </Field.Label>
                   <Textarea
-                    placeholder={t('buy_products.description_placeholder') || 'Описание товара (мин. 10 символов)'}
+                    placeholder={`Описание товара (мин. ${VALIDATION_RULES.description.minLength} символов)`}
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) => {
+                      setFormData({ ...formData, description: e.target.value })
+                      if (errors.description) setErrors({ ...errors, description: undefined })
+                    }}
                     rows={4}
                   />
+                  <HStack justify="space-between" fontSize="xs" mt={1}>
+                    <Text color="gray.500">
+                      Минимум: {VALIDATION_RULES.description.minLength} • Максимум: {VALIDATION_RULES.description.maxLength}
+                    </Text>
+                  </HStack>
+                  {errors.description && <Field.ErrorText>{errors.description}</Field.ErrorText>}
                 </Field.Root>
 
                 <HStack gap={4} align="start" w="full">
@@ -282,6 +339,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                   setIsFormOpen(false)
                   setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
                   setSelectedFiles([])
+                  setErrors({})
                 }}
               >
                 {t('common:buttons.cancel') || 'Отмена'}

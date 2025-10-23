@@ -35,20 +35,20 @@ router.get('/', verifyToken, async (req, res) => {
 
 // POST /products - Создать продукт/услугу
 router.post('/', verifyToken, async (req, res) => {
-  try {
+  // try {
     const { name, category, description, type, productUrl, price, unit, minOrder } = req.body;
     const companyId = req.user.companyId;
 
     console.log('[Products] POST Creating product:', { name, category, type });
 
-    // Валидация
-    if (!name || !category || !description || !type) {
-      return res.status(400).json({ error: 'name, category, description, and type are required' });
-    }
+    // // Валидация
+    // if (!name || !category || !description || !type) {
+    //   return res.status(400).json({ error: 'name, category, description, and type are required' });
+    // }
 
-    if (description.length < 20) {
-      return res.status(400).json({ error: 'Description must be at least 20 characters' });
-    }
+    // if (description.length < 20) {
+    //   return res.status(400).json({ error: 'Description must be at least 20 characters' });
+    // }
 
     const newProduct = new Product({
       name: name.trim(),
@@ -66,10 +66,10 @@ router.post('/', verifyToken, async (req, res) => {
     console.log('[Products] Product created with ID:', savedProduct._id);
 
     res.status(201).json(transformProduct(savedProduct));
-  } catch (error) {
-    console.error('[Products] Create error:', error.message);
-    res.status(500).json({ error: 'Internal server error', message: error.message });
-  }
+  // } catch (error) {
+  //   console.error('[Products] Create error:', error.message);
+  //   res.status(500).json({ error: 'Internal server error', message: error.message });
+  // }
 });
 
 // PUT /products/:id - Обновить продукт/услугу
