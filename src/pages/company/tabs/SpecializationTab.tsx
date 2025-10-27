@@ -17,12 +17,15 @@ import {
   Badge,
   IconButton,
   Flex,
+  Separator,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiPlus, FiEdit, FiTrash2, FiExternalLink } from 'react-icons/fi'
 import { useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation } from '../../../__data__/api/productsApi'
 import { PRODUCT_CATEGORIES } from '../../../utils/constants'
 import { useToast } from '../../../hooks/useToast'
+import { BuyProductsTab } from './BuyProductsTab'
+import { useAuth } from '../../../hooks/useAuth'
 
 interface ProductFormData {
   name: string
@@ -67,9 +70,15 @@ const validateProductForm = (formData: ProductFormData): ValidationErrors => {
   return errors
 }
 
-export const SpecializationTab = () => {
+interface SpecializationTabProps {
+  companyId?: string
+  isOwnCompany?: boolean
+}
+
+export const SpecializationTab = ({ companyId, isOwnCompany = true }: SpecializationTabProps) => {
   const { t } = useTranslation('company')
   const toast = useToast()
+  const { company } = useAuth()
   const { open, onOpen, onClose } = useDisclosure()
   
   const [editingProduct, setEditingProduct] = useState<any>(null)
@@ -88,7 +97,6 @@ export const SpecializationTab = () => {
   const [deleteProduct] = useDeleteProductMutation()
 
   const sellProducts = products?.filter((p: any) => p.type === 'sell') || []
-  const buyProducts = products?.filter((p: any) => p.type === 'buy') || []
 
   const handleOpenModal = (type: 'sell' | 'buy', product?: any) => {
     if (product) {
@@ -115,6 +123,7 @@ export const SpecializationTab = () => {
   }
 
   const handleClose = () => {
+    onClose()
     setEditingProduct(null)
     setFormData({
       name: '',
@@ -124,12 +133,10 @@ export const SpecializationTab = () => {
       productUrl: '',
     })
     setErrors({})
-    onClose()
   }
 
   const handleSave = async () => {
     const validationErrors = validateProductForm(formData)
-    
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors)
       return
@@ -139,78 +146,87 @@ export const SpecializationTab = () => {
       if (editingProduct) {
         await updateProduct({
           id: editingProduct.id,
-          data: formData,
+          ...formData,
         }).unwrap()
+        toast.success(t('common:labels.success') || 'Товар обновлен')
       } else {
         await createProduct(formData).unwrap()
+        toast.success(t('common:labels.success') || 'Товар добавлен')
       }
-      
-      toast.success(t('common:labels.success'))
       handleClose()
     } catch (error) {
-      toast.error(t('common:errors.server_error'))
+      toast.error(t('common:errors.server_error') || 'Ошибка при сохранении')
     }
   }
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (productId: string) => {
     try {
-      await deleteProduct(id).unwrap()
-      toast.success(t('common:labels.success'))
+      await deleteProduct(productId).unwrap()
+      toast.success(t('common:labels.success') || 'Товар удален')
     } catch (error) {
-      toast.error(t('common:errors.server_error'))
+      toast.error(t('common:errors.server_error') || 'Ошибка при удалении')
     }
+  }
+
+  const getCategoryLabel = (categoryValue: string): string => {
+    const category = PRODUCT_CATEGORIES.find(cat => cat.value === categoryValue)
+    return category ? category.label : categoryValue
   }
 
   const ProductCard = ({ product }: { product: any }) => (
     <Box
-      p={4}
       borderWidth="1px"
       borderRadius="lg"
-      _hover={{ shadow: 'md' }}
+      p={4}
+      _hover={{ shadow: 'md', borderColor: 'brand.300' }}
       transition="all 0.2s"
     >
-      <VStack align="stretch" gap={3}>
-        <HStack justify="space-between">
-          <Heading size="sm">{product.name}</Heading>
-          <HStack>
-            <IconButton
-              aria-label="Edit"
-              size="sm"
-              variant="ghost"
-              onClick={() => handleOpenModal(product.type, product)}
-              color="black"
-            >
-              <FiEdit />
-            </IconButton>
-            <IconButton
-              aria-label="Delete"
-              size="sm"
-              variant="ghost"
-              colorPalette="red"
-              onClick={() => handleDelete(product.id)}
-              color="black"
-            >
-              <FiTrash2 />
-            </IconButton>
-          </HStack>
+      <VStack align="start" gap={3}>
+        <HStack justify="space-between" w="full">
+          <Heading size="md">{product.name}</Heading>
+          {isOwnCompany && (
+            <HStack gap={2}>
+              <IconButton
+                size="sm"
+                variant="outline"
+                onClick={() => handleOpenModal('sell', product)}
+                title="Редактировать"
+              >
+                <FiEdit />
+              </IconButton>
+              <IconButton
+                size="sm"
+                variant="outline"
+                colorPalette="red"
+                onClick={() => handleDelete(product.id)}
+                title="Удалить"
+              >
+                <FiTrash2 />
+              </IconButton>
+            </HStack>
+          )}
         </HStack>
-        <Badge colorPalette="blue" w="fit-content">
-          {product.category}
-        </Badge>
+
+        <HStack gap={2}>
+          <Badge colorPalette="brand" fontSize="xs">
+            {getCategoryLabel(product.category)}
+          </Badge>
+        </HStack>
+
         <Text fontSize="sm" color="gray.600">
           {product.description}
         </Text>
+
         {product.productUrl && (
           <Button
+            size="sm"
+            variant="outline"
             as="a"
             href={product.productUrl}
             target="_blank"
-            size="sm"
-            variant="link"
-            colorPalette="brand"
           >
-            {t('specialization.product_url')}
             <FiExternalLink />
+            {t('specialization.view_product') || 'Перейти на продукт'}
           </Button>
         )}
       </VStack>
@@ -219,83 +235,71 @@ export const SpecializationTab = () => {
 
   return (
     <VStack gap={8} align="stretch">
-      {/* Sell Section */}
-      <Box>
-        <HStack justify="space-between" mb={4}>
-          <Heading size="md">{t('specialization.sell_section')}</Heading>
-          <Button
-            colorPalette="brand"
-            size="sm"
-            onClick={() => handleOpenModal('sell')}
-          >
-            <FiPlus />
-            {t('specialization.add_product')}
-          </Button>
+      {/* Я Продаю Section */}
+      <VStack gap={6} align="stretch">
+        <HStack justify="space-between">
+          <Heading size="lg">{t('specialization.title') || 'Специализация'}</Heading>
+          {isOwnCompany && (
+            <Button colorPalette="brand" onClick={() => handleOpenModal('sell')}>
+              <FiPlus />
+              {t('specialization.add_product')}
+            </Button>
+          )}
         </HStack>
+
         {sellProducts.length > 0 ? (
-          <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
+          <Grid
+            templateColumns={{
+              base: '1fr',
+              md: 'repeat(2, 1fr)',
+              lg: 'repeat(3, 1fr)',
+            }}
+            gap={6}
+          >
             {sellProducts.map((product: any) => (
-              <ProductCard key={product.id} product={product} />
+              <GridItem key={product.id}>
+                <ProductCard product={product} />
+              </GridItem>
             ))}
           </Grid>
         ) : (
           <Flex
-            p={8}
+            p={12}
             borderWidth="1px"
             borderRadius="lg"
             justify="center"
+            direction="column"
+            align="center"
             color="gray.500"
           >
-            <Text>{t('specialization.no_products')}</Text>
+            <Text fontSize="lg">{t('specialization.no_products') || 'Нет товаров'}</Text>
           </Flex>
         )}
-      </Box>
+      </VStack>
 
-      {/* Buy Section */}
-      <Box>
-        <HStack justify="space-between" mb={4}>
-          <Heading size="md">{t('specialization.buy_section')}</Heading>
-          <Button
-            colorPalette="green"
-            size="sm"
-            onClick={() => handleOpenModal('buy')}
-          >
-            <FiPlus />
-            {t('specialization.add_product')}
-          </Button>
-        </HStack>
-        {buyProducts.length > 0 ? (
-          <Grid templateColumns={{ base: '1fr', md: 'repeat(2, 1fr)' }} gap={4}>
-            {buyProducts.map((product: any) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </Grid>
-        ) : (
-          <Flex
-            p={8}
-            borderWidth="1px"
-            borderRadius="lg"
-            justify="center"
-            color="gray.500"
-          >
-            <Text>{t('specialization.no_products')}</Text>
-          </Flex>
-        )}
-      </Box>
+      {/* Separator */}
+      <Separator />
 
-      {/* Dialog */}
-      <Dialog.Root open={open} onOpenChange={(e) => e.open ? onOpen() : onClose()} size="xl">
+      {/* Я Покупаю Section */}
+      <VStack gap={6} align="stretch">
+        <BuyProductsTab companyId={companyId} isOwnCompany={isOwnCompany} />
+      </VStack>
+
+      {/* Add/Edit Product Dialog */}
+      <Dialog.Root open={open} onOpenChange={(e) => e.open ? onOpen() : handleClose()} size="lg">
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
               <Dialog.Title>
-                {editingProduct ? t('common:buttons.edit') : t('specialization.add_product')}
+                {editingProduct
+                  ? t('specialization.edit_product')
+                  : t('specialization.add_product')}
               </Dialog.Title>
               <Dialog.CloseTrigger />
             </Dialog.Header>
             <Dialog.Body>
-              <VStack gap={4}>
+              <VStack gap={6}>
                 <Field.Root required invalid={!!errors.name}>
                   <Field.Label>{t('specialization.product_name')}</Field.Label>
                   <Input
@@ -304,21 +308,22 @@ export const SpecializationTab = () => {
                       setFormData({ ...formData, name: e.target.value })
                       if (errors.name) setErrors({ ...errors, name: undefined })
                     }}
+                    placeholder={t('specialization.product_name')}
                   />
                   {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
                 </Field.Root>
 
                 <Field.Root required invalid={!!errors.category}>
                   <Field.Label>{t('specialization.category')}</Field.Label>
-                  <NativeSelect.Root>
+                  <NativeSelect.Root size="sm">
                     <NativeSelect.Field
                       value={formData.category}
                       onChange={(e) => {
                         setFormData({ ...formData, category: e.target.value })
                         if (errors.category) setErrors({ ...errors, category: undefined })
                       }}
-                      placeholder={t('common:labels.select')}
                     >
+                      <option value="">{t('specialization.select_category')}</option>
                       {PRODUCT_CATEGORIES.map((cat) => (
                         <option key={cat.value} value={cat.value}>
                           {cat.label}
@@ -386,4 +391,3 @@ export const SpecializationTab = () => {
     </VStack>
   )
 }
-

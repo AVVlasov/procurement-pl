@@ -12,7 +12,6 @@ import { SpecializationTab } from './tabs/SpecializationTab'
 import { LegalTab } from './tabs/LegalTab'
 import { ReviewsTab } from './tabs/ReviewsTab'
 import { ExperienceTab } from './tabs/ExperienceTab'
-import { BuyProductsTab } from './tabs/BuyProductsTab'
 import { useAuth } from '../../hooks/useAuth'
 import { colors } from '../../utils/colorMode'
 
@@ -169,29 +168,6 @@ export const CompanyProfile = () => {
               >
                 {t('tabs.reviews')}
               </Tabs.Trigger>
-              <Tabs.Trigger 
-                value="buyProducts"
-                whiteSpace="nowrap"
-                fontSize={{ base: 'sm', md: 'md' }}
-                px={{ base: 3, md: 4 }}
-                py={{ base: 2, md: 3 }}
-                borderRadius={{ base: 'md', md: 'none' }}
-                fontWeight="medium"
-                transition="all 0.2s"
-                _hover={{
-                  bg: colors.bg.hover,
-                  color: colors.text.primary
-                }}
-                _selected={{
-                  bg: colors.bg.active,
-                  color: colors.text.active,
-                  fontWeight: 'semibold',
-                  borderBottom: '3px solid',
-                  borderBottomColor: 'brand.500'
-                }}
-              >
-                {t('buy_products.title')}
-              </Tabs.Trigger>
             </Tabs.List>
 
             <Box flex="1" p={{ base: 4, md: 6 }}>
@@ -209,9 +185,6 @@ export const CompanyProfile = () => {
               </Tabs.Content>
               <Tabs.Content value="reviews">
                 <ReviewsTab isOwnCompany={isOwnCompany} companyId={displayedCompanyId} />
-              </Tabs.Content>
-              <Tabs.Content value="buyProducts">
-                <BuyProductsTab companyId={displayedCompanyId} isOwnCompany={isOwnCompany} />
               </Tabs.Content>
             </Box>
           </Tabs.Root>

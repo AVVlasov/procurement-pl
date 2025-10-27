@@ -31,10 +31,13 @@
     "add_product": "Add Product/Service",
     "product_name": "Name",
     "category": "Category",
+    "select_category": "Select category",
     "description": "Description",
     "product_url": "Product URL",
+    "view_product": "View Product",
     "files": "Files",
     "upload_file": "Upload File",
+    "edit_product": "Edit Product/Service",
     "file_types": {
       "commercial_offer": "Commercial Offer",
       "technical_specs": "Technical Specifications",

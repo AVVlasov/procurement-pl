@@ -37,7 +37,7 @@ export const CompanyCard = ({
   return (
     <Box
       bg={bg}
-      p={6}
+      p={{ base: 4, sm: 5, md: 6 }}
       borderRadius="lg"
       borderWidth="1px"
       borderColor={borderColor}
@@ -49,30 +49,31 @@ export const CompanyCard = ({
         transform: 'translateY(-2px)',
       }}
     >
-      <VStack gap={4} align="stretch">
+      <VStack gap={{ base: 3, md: 4 }} align="stretch">
         {/* Header */}
-        <Flex justify="space-between" align="start">
-          <Flex gap={4} flex={1} align="start">
+        <Flex justify="space-between" align="start" gap={2} flexWrap={{ base: 'wrap', sm: 'nowrap' }}>
+          <Flex gap={{ base: 3, md: 4 }} flex={1} align="start" minW="0">
             <Avatar.Root
-              size="lg"
+              size={{ base: 'md', md: 'lg' }}
               name={company.fullName}
               src={company.logo}
               bg="brand.500"
+              flexShrink={0}
             >
               <Avatar.Fallback>{(company.shortName || company.fullName)[0]}</Avatar.Fallback>
             </Avatar.Root>
-            <VStack align="start" gap={1} flex={1}>
-              <Flex gap={2} align="center">
-                <Text fontSize="xl" fontWeight="bold">
+            <VStack align="start" gap={1} flex={1} minW="0">
+              <Flex gap={2} align="center" flexWrap="wrap">
+                <Text fontSize={{ base: 'lg', md: 'xl' }} fontWeight="bold" noOfLines={2}>
                   {company.shortName || company.fullName}
                 </Text>
                 {company.verified && (
-                  <Badge colorPalette="green" fontSize="xs">
+                  <Badge colorPalette="green" fontSize={{ base: 'xs', md: 'xs' }} flexShrink={0}>
                     ✓ Verified
                   </Badge>
                 )}
               </Flex>
-              <Text fontSize="sm" color="gray.500">
+              <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.500" noOfLines={1}>
                 {company.industry}
               </Text>
             </VStack>
@@ -84,6 +85,8 @@ export const CompanyCard = ({
             colorPalette={isFavorite ? 'red' : 'gray'}
             color={isFavorite ? 'red.500' : undefined}
             onClick={() => onToggleFavorite?.(company.id)}
+            size={{ base: 'sm', md: 'md' }}
+            flexShrink={0}
           >
             <FiHeart />
           </IconButton>
@@ -91,49 +94,50 @@ export const CompanyCard = ({
 
         {/* Description/Slogan */}
         {company.slogan && (
-          <Text fontSize="sm" color="gray.600" fontStyle="italic">
+          <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.600" fontStyle="italic" noOfLines={2}>
             "{company.slogan}"
           </Text>
         )}
 
         {/* Company Info */}
-        <Flex gap={6} flexWrap="wrap">
+        <Flex gap={{ base: 3, md: 6 }} flexWrap="wrap">
           {company.companySize && (
-            <Flex gap={2} fontSize="sm" align="center">
-              <Box as={FiUsers} color="gray.500" />
-              <Text>{company.companySize}</Text>
+            <Flex gap={2} fontSize={{ base: 'xs', md: 'sm' }} align="center">
+              <Box as={FiUsers} color="gray.500" flexShrink={0} />
+              <Text noOfLines={1}>{company.companySize}</Text>
             </Flex>
           )}
           {company.rating && (
-            <Flex gap={2} fontSize="sm" align="center">
-              <Box as={FiStar} color="yellow.500" />
+            <Flex gap={2} fontSize={{ base: 'xs', md: 'sm' }} align="center">
+              <Box as={FiStar} color="yellow.500" flexShrink={0} />
               <Text fontWeight="bold">{company.rating.toFixed(2)}</Text>
             </Flex>
           )}
           {company.legalAddress && (
-            <Flex gap={2} fontSize="sm" color="gray.600" align="center">
-              <Box as={FiMapPin} />
+            <Flex gap={2} fontSize={{ base: 'xs', md: 'sm' }} color="gray.600" align="center" minW="0">
+              <Box as={FiMapPin} flexShrink={0} />
               <Text lineClamp={1}>{company.legalAddress}</Text>
             </Flex>
           )}
         </Flex>
 
         {/* Tags */}
-        <HStack gap={2} flexWrap="wrap">
-          <Badge colorPalette="blue">{company.legalForm}</Badge>
+        <Flex gap={2} flexWrap="wrap">
+          <Badge colorPalette="blue" fontSize={{ base: 'xs', md: 'sm' }}>{company.legalForm}</Badge>
           {company.employeeCount && (
-            <Badge colorPalette="purple">{company.employeeCount}</Badge>
+            <Badge colorPalette="purple" fontSize={{ base: 'xs', md: 'sm' }}>{company.employeeCount}</Badge>
           )}
-        </HStack>
+        </Flex>
 
         {/* Actions */}
-        <Flex gap={3}>
+        <Flex gap={{ base: 2, md: 3 }} direction={{ base: 'column', sm: 'row' }}>
           <Button
             flex={1}
             colorPalette="brand"
             onClick={() => navigate(`/company/${company.id}`)}
+            size={{ base: 'sm', md: 'md' }}
           >
-            <Text mr={2}>{t('results.view_details')}</Text>
+            <Text mr={1}>{t('results.view_details')}</Text>
             <FiExternalLink />
           </Button>
           <Button
@@ -141,9 +145,10 @@ export const CompanyCard = ({
             variant="outline"
             colorPalette="brand"
             onClick={() => onContact?.(company.id, company.shortName || company.fullName)}
+            size={{ base: 'sm', md: 'md' }}
           >
             <FiMail />
-            <Text ml={2}>{t('results.contact')}</Text>
+            <Text ml={1}>{t('results.contact')}</Text>
           </Button>
         </Flex>
       </VStack>

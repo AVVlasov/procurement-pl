@@ -15,6 +15,21 @@ const baseQuery = fetchBaseQuery({
   },
 })
 
+export interface Request {
+  _id?: string
+  id?: string
+  senderCompanyId: string
+  recipientCompanyId: string
+  text: string
+  files: Array<{ name: string; type: string; size: number }>
+  productId?: string
+  status: 'pending' | 'accepted' | 'rejected'
+  response?: string
+  respondedAt?: string
+  createdAt: string
+  updatedAt?: string
+}
+
 export interface BulkRequestResultItem {
   companyId: string
   success: boolean
@@ -32,14 +47,39 @@ export interface BulkRequestResponse {
 export const requestsApi = createApi({
   reducerPath: 'requestsApi',
   baseQuery: baseQuery,
-  tagTypes: ['BulkRequests'],
+  tagTypes: ['BulkRequests', 'Requests'],
   endpoints: (builder) => ({
     sendBulkRequest: builder.mutation<BulkRequestResponse, { text: string; recipientCompanyIds: string[]; files: Array<{ name: string; type: string; size: number }> }>(
       {
-        query: (data) => ({ url: '/requests/bulk', method: 'POST', body: data }),
-        invalidatesTags: ['BulkRequests'],
+        query: (data) => ({ url: '/requests', method: 'POST', body: data }),
+        invalidatesTags: ['BulkRequests', 'Requests'],
       }
     ),
+    getSentRequests: builder.query<Request[], void>({
+      query: () => '/requests/sent',
+      providesTags: ['Requests'],
+      pollingInterval: 5000,
+    }),
+    getReceivedRequests: builder.query<Request[], void>({
+      query: () => '/requests/received',
+      providesTags: ['Requests'],
+      pollingInterval: 5000,
+    }),
+    respondToRequest: builder.mutation<Request, { id: string; response: string; status: 'accepted' | 'rejected' }>({
+      query: ({ id, response, status }) => ({
+        url: `/requests/${id}`,
+        method: 'PUT',
+        body: { response, status },
+      }),
+      invalidatesTags: ['Requests'],
+    }),
+    deleteRequest: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/requests/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: ['Requests'],
+    }),
     getLastReport: builder.query<BulkRequestResponse, void>({
       query: () => '/reports/last',
       providesTags: ['BulkRequests'],
@@ -47,6 +87,13 @@ export const requestsApi = createApi({
   }),
 })
 
-export const { useSendBulkRequestMutation, useGetLastReportQuery } = requestsApi
+export const {
+  useSendBulkRequestMutation,
+  useGetSentRequestsQuery,
+  useGetReceivedRequestsQuery,
+  useRespondToRequestMutation,
+  useDeleteRequestMutation,
+  useGetLastReportQuery,
+} = requestsApi
 
 

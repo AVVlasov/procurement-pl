@@ -7,6 +7,14 @@ const connectDB = require(path.join(__dirname, '..', 'config', 'db'));
 // Загрузить переменные окружения
 dotenv.config();
 
+// Включить логирование при разработке: установите DEV=true в .env или при запуске
+// export DEV=true && npm start (для Linux/Mac)
+// set DEV=true && npm start (для Windows)
+// По умолчанию логи отключены. Все console.log функции отключаются если DEV !== 'true'
+if (process.env.DEV === 'true') {
+  console.log('ℹ️ DEBUG MODE ENABLED - All logs are visible');
+}
+
 // Импортировать маршруты
 const authRoutes = require(path.join(__dirname, '..', 'routes', 'auth'));
 const companiesRoutes = require(path.join(__dirname, '..', 'routes', 'companies'));
@@ -17,6 +25,7 @@ const experienceRoutes = require(path.join(__dirname, '..', 'routes', 'experienc
 const productsRoutes = require(path.join(__dirname, '..', 'routes', 'products'));
 const reviewsRoutes = require(path.join(__dirname, '..', 'routes', 'reviews'));
 const buyProductsRoutes = require(path.join(__dirname, '..', 'routes', 'buyProducts'));
+const requestsRoutes = require(path.join(__dirname, '..', 'routes', 'requests'));
 const homeRoutes = require(path.join(__dirname, '..', 'routes', 'home'));
 
 const app = express();
@@ -74,6 +83,7 @@ app.use('/buy-products', buyProductsRoutes);
 app.use('/experience', experienceRoutes);
 app.use('/products', productsRoutes);
 app.use('/reviews', reviewsRoutes);
+app.use('/requests', requestsRoutes);
 app.use('/home', homeRoutes);
 
 // Обработка ошибок

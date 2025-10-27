@@ -11,7 +11,7 @@ import {
   Drawer,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 import {
   FiHome,
@@ -37,10 +37,11 @@ interface NavItemProps {
   icon: React.ElementType
   label: string
   path: string
+  isActive: boolean
   onClick: () => void
 }
 
-const NavItem = ({ icon: Icon, label, onClick }: NavItemProps) => {
+const NavItem = ({ icon: Icon, label, isActive, onClick }: NavItemProps) => {
   return (
     <Flex
       align="center"
@@ -50,7 +51,8 @@ const NavItem = ({ icon: Icon, label, onClick }: NavItemProps) => {
       role="group"
       cursor="pointer"
       transition="all 0.2s ease-in-out"
-      color="gray.700"
+      bg={isActive ? 'orange.500' : 'transparent'}
+      color={isActive ? 'white' : 'gray.700'}
       _hover={{
         bg: 'orange.500',
         color: 'white',
@@ -69,6 +71,7 @@ const NavItem = ({ icon: Icon, label, onClick }: NavItemProps) => {
 const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   const { t } = useTranslation('common')
   const navigate = useNavigate()
+  const location = useLocation()
 
   const navItems = [
     { icon: FiHome, label: t('nav.dashboard'), path: '/dashboard' },
@@ -78,6 +81,16 @@ const Sidebar = ({ onClose }: { onClose?: () => void }) => {
     { icon: FiFileText, label: t('nav.requests'), path: '/requests' },
     { icon: FiSettings, label: t('nav.settings'), path: '/settings' },
   ]
+
+  const isPathActive = (path: string) => {
+    if (path === '/dashboard' && (location.pathname === '/' || location.pathname === '/dashboard')) {
+      return true
+    }
+    if (path === '/company/profile' && location.pathname.startsWith('/company')) {
+      return true
+    }
+    return location.pathname === path
+  }
 
   const handleNavClick = (path: string) => {
     navigate(path)
@@ -116,6 +129,7 @@ const Sidebar = ({ onClose }: { onClose?: () => void }) => {
             icon={item.icon}
             label={item.label}
             path={item.path}
+            isActive={isPathActive(item.path)}
             onClick={() => handleNavClick(item.path)}
           />
         ))}
@@ -129,6 +143,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
   const { user } = useAuth()
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleLogout = () => {
@@ -149,6 +164,16 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
     { icon: FiFileText, label: t('nav.requests'), path: '/requests' },
     { icon: FiSettings, label: t('nav.settings'), path: '/settings' },
   ]
+
+  const isPathActive = (path: string) => {
+    if (path === '/dashboard' && (location.pathname === '/' || location.pathname === '/dashboard')) {
+      return true
+    }
+    if (path === '/company/profile' && location.pathname.startsWith('/company')) {
+      return true
+    }
+    return location.pathname === path
+  }
 
   return (
     <Box minH="100vh" bg={colors.bg.secondary}>
@@ -181,6 +206,7 @@ export const MainLayout = ({ children }: MainLayoutProps) => {
                   icon={item.icon}
                   label={item.label}
                   path={item.path}
+                  isActive={isPathActive(item.path)}
                   onClick={() => {
                     navigate(item.path)
                     setIsMobileMenuOpen(false)

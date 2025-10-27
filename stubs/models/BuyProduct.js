@@ -35,6 +35,16 @@ const buyProductSchema = new mongoose.Schema({
       default: Date.now
     }
   }],
+  acceptedBy: [{
+    companyId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company'
+    },
+    acceptedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   status: {
     type: String,
     enum: ['draft', 'published'],

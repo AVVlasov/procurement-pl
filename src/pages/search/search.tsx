@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   Box,
   Container,
@@ -20,7 +20,6 @@ import { ResultsGrid } from '../../components/search/ResultsGrid'
 import { useToast } from '../../hooks/useToast'
 import {
   useSearchCompaniesQuery,
-  useAiSearchMutation,
   useAddToFavoritesMutation,
   useRemoveFromFavoritesMutation,
 } from '../../__data__/api/searchApi'
@@ -34,8 +33,6 @@ export const SearchPage = () => {
   const { company } = useAuth()
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [useAI, setUseAI] = useState(false)
-  const [aiSearchResults, setAiSearchResults] = useState<SearchResult | null>(null)
   const [filters, setFilters] = useState<SearchParams>({
     page: 1,
     limit: 10,
@@ -48,37 +45,39 @@ export const SearchPage = () => {
   const [selectedCompanyName, setSelectedCompanyName] = useState<string>('')
   const [messageText, setMessageText] = useState('')
 
+  const [sendMessage, { isLoading: isSendingMessage }] = useSendMessageMutation()
+
   const {
     data: searchResults,
     isLoading: isSearching,
     refetch,
   } = useSearchCompaniesQuery(
     { ...filters, query: searchQuery },
-    { skip: !searchQuery || useAI }
+    { skip: !searchQuery }
   )
 
-  const [aiSearch, { isLoading: isAISearching }] = useAiSearchMutation()
+  // Переводим запрос при изменении фильтров
+  useEffect(() => {
+    if (searchQuery) {
+      // Небольшая задержка, чтобы дать RTK Query время обработать новые параметры,
+      // затем явно вызываем refetch
+      const timer = setTimeout(() => {
+        refetch()
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [filters.industries, filters.companySize, filters.geography, filters.minRating, refetch, searchQuery])
+
   const [addToFavorites] = useAddToFavoritesMutation()
   const [removeFromFavorites] = useRemoveFromFavoritesMutation()
-  const [sendMessage, { isLoading: isSendingMessage }] = useSendMessageMutation()
 
-  const handleSearch = async (query: string, aiMode = false) => {
+  const handleSearch = async (query: string) => {
     setSearchQuery(query)
-    setUseAI(aiMode)
-
-    if (aiMode) {
-      try {
-        const result = await aiSearch({ query }).unwrap()
-        setAiSearchResults(result)
-        console.log('AI Search result:', result)
-      } catch (error) {
-        console.error('AI Search error:', error)
-        toast.error(t('common:errors.server_error'))
-      }
-    } else {
-      setAiSearchResults(null)
-      refetch()
-    }
+    // Сохраняем выбранные фильтры, только сбрасываем страницу
+    setFilters(prev => ({
+      ...prev,
+      page: 1,
+    }))
   }
 
   const handleFiltersChange = (newFilters: SearchParams) => {
@@ -152,27 +151,27 @@ export const SearchPage = () => {
   return (
     <MainLayout>
       <Container maxW="container.xl">
-        <VStack gap={8} align="stretch">
+        <VStack gap={{ base: 6, md: 8 }} align="stretch">
           {/* Header */}
           <Box>
-            <Heading size="xl" mb={4}>
+            <Heading size={{ base: 'lg', md: 'xl' }} mb={{ base: 3, md: 4 }}>
               {t('title')}
             </Heading>
             <SmartSearchBar
               onSearch={handleSearch}
-              isLoading={isSearching || isAISearching}
+              isLoading={isSearching}
             />
           </Box>
 
           {/* Main Content */}
           <Grid
-            templateColumns={{ base: '1fr', lg: '300px 1fr' }}
-            gap={8}
+            templateColumns={{ base: '1fr', md: '220px 1fr', lg: '280px 1fr', xl: '300px 1fr' }}
+            gap={{ base: 6, md: 5, lg: 6, xl: 8 }}
             alignItems="start"
           >
             {/* Filters Sidebar */}
-            <GridItem>
-              <Box position="sticky" top={4}>
+            <GridItem display={{ base: 'none', md: 'block' }}>
+              <Box position="sticky" top={{ base: 2, md: 4 }}>
                 <FiltersPanel
                   filters={filters}
                   onChange={handleFiltersChange}
@@ -182,25 +181,11 @@ export const SearchPage = () => {
             </GridItem>
 
             {/* Results */}
-            <GridItem>
-              {useAI && aiSearchResults?.aiSuggestion && (
-                <Box
-                  bg="brand.50"
-                  borderWidth="1px"
-                  borderColor="brand.200"
-                  borderRadius="lg"
-                  p={4}
-                  mb={6}
-                >
-                  <Text fontSize="sm" color="brand.700" fontWeight="medium">
-                    🤖 AI Анализ: {aiSearchResults.aiSuggestion}
-                  </Text>
-                </Box>
-              )}
+            <GridItem minW="0">
               <ResultsGrid
-                companies={useAI ? (aiSearchResults?.companies || []) : (searchResults?.companies || [])}
-                total={useAI ? (aiSearchResults?.total || 0) : (searchResults?.total || 0)}
-                isLoading={isSearching || isAISearching}
+                companies={searchResults?.companies || []}
+                total={searchResults?.total || 0}
+                isLoading={isSearching}
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
                 onContact={handleContact}

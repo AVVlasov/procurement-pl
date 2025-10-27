@@ -105,13 +105,6 @@ export const searchApi = createApi({
       invalidatesTags: ['Search'],
     }),
     
-    getSuggestions: builder.query<string[], string>({
-      query: (query) => ({
-        url: '/suggestions',
-        params: { q: query },
-      }),
-    }),
-    
     saveSearch: builder.mutation<SavedSearch, { name: string; params: SearchParams }>({
       query: (data) => ({
         url: '/saved',
@@ -170,8 +163,6 @@ export const {
   useSearchCompaniesQuery,
   useLazySearchCompaniesQuery,
   useAiSearchMutation,
-  useGetSuggestionsQuery,
-  useLazyGetSuggestionsQuery,
   useSaveSearchMutation,
   useGetSavedSearchesQuery,
   useDeleteSavedSearchMutation,

@@ -34,6 +34,9 @@ export const LegalTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId
   })
   const [updateCompany, { isLoading: isUpdating }] = useUpdateCompanyMutation()
 
+  // Determine if details should be visible
+  const isDetailsVisible = isOwnCompany || company?.verified
+
   const [formData, setFormData] = useState({
     legalAddress: company?.legalAddress || '',
     actualAddress: company?.actualAddress || '',
@@ -88,14 +91,14 @@ export const LegalTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId
       {/* Header */}
       <HStack justify="space-between">
         <Heading size="lg">{t('legal.title')}</Heading>
-        {!isEditing ? (
+        {!isEditing && isOwnCompany ? (
           <Button
             colorPalette="brand"
             onClick={() => setIsEditing(true)}
           >
             {t('common:buttons.edit')}
           </Button>
-        ) : (
+        ) : isEditing ? (
           <HStack>
             <Button
               colorPalette="brand"
@@ -111,17 +114,19 @@ export const LegalTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId
               {t('common:buttons.cancel')}
             </Button>
           </HStack>
-        )}
+        ) : null}
       </HStack>
 
-      <Alert.Root borderRadius="lg">
-        <Alert.Indicator />
-        <Alert.Content>
-          <Alert.Description>
-            {t('legal.bank_details_hidden')} - доступ предоставляется только верифицированным партнерам
-          </Alert.Description>
-        </Alert.Content>
-      </Alert.Root>
+      {!isDetailsVisible && (
+        <Alert.Root borderRadius="lg">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Description>
+              {t('legal.bank_details_hidden')} - доступ предоставляется только верифицированным партнерам
+            </Alert.Description>
+          </Alert.Content>
+        </Alert.Root>
+      )}
 
       {/* Legal Address */}
       <Box>
@@ -181,42 +186,50 @@ export const LegalTab = ({ companyId: propCompanyId, isOwnCompany }: { companyId
           <Box position="relative">
             {company?.bankDetails ? (
               <>
-                <Box
-                  p={4}
-                  borderWidth="1px"
-                  borderRadius="md"
-                  filter="blur(4px)"
-                  userSelect="none"
-                >
-                  <Text>{company.bankDetails}</Text>
-                </Box>
-                <Flex
-                  position="absolute"
-                  top={0}
-                  left={0}
-                  right={0}
-                  bottom={0}
-                  align="center"
-                  justify="center"
-                  bg="rgba(255,255,255,0.9)"
-                  borderRadius="md"
-                >
-                  <VStack>
-                    <FiLock size={32} color="gray" />
-                    <Text fontWeight="bold" color="gray.600">
-                      {t('legal.bank_details_hidden')}
-                    </Text>
-                    <Button
-                      size="sm"
-                      colorPalette="brand"
-                      onClick={() => {
-                        toast.info('Запрос отправлен', 'Ожидайте подтверждения от компании')
-                      }}
+                {isDetailsVisible ? (
+                  <Text fontSize="md" p={4} borderWidth="1px" borderRadius="md">
+                    {company.bankDetails}
+                  </Text>
+                ) : (
+                  <>
+                    <Box
+                      p={4}
+                      borderWidth="1px"
+                      borderRadius="md"
+                      filter="blur(4px)"
+                      userSelect="none"
                     >
-                      {t('legal.request_access')}
-                    </Button>
-                  </VStack>
-                </Flex>
+                      <Text>{company.bankDetails}</Text>
+                    </Box>
+                    <Flex
+                      position="absolute"
+                      top={0}
+                      left={0}
+                      right={0}
+                      bottom={0}
+                      align="center"
+                      justify="center"
+                      bg="rgba(255,255,255,0.9)"
+                      borderRadius="md"
+                    >
+                      <VStack>
+                        <FiLock size={32} color="gray" />
+                        <Text fontWeight="bold" color="gray.600">
+                          {t('legal.bank_details_hidden')}
+                        </Text>
+                        <Button
+                          size="sm"
+                          colorPalette="brand"
+                          onClick={() => {
+                            toast.info('Запрос отправлен', 'Ожидайте подтверждения от компании')
+                          }}
+                        >
+                          {t('legal.request_access')}
+                        </Button>
+                      </VStack>
+                    </Flex>
+                  </>
+                )}
               </>
             ) : (
               <Text fontSize="md" p={4} borderWidth="1px" borderRadius="md" color="gray.500">

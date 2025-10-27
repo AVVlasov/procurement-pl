@@ -49,6 +49,7 @@ export const reviewsApi = createApi({
       },
       providesTags: (result, error, companyId) => 
         companyId ? [{ type: 'Reviews', id: companyId }] : [],
+      pollingInterval: 5000,
     }),
     createReview: builder.mutation<Review, CreateReviewPayload>({
       query: (payload) => ({

@@ -16,18 +16,26 @@ const baseQuery = fetchBaseQuery({
 })
 
 export interface MessageThread {
-  id: string
-  participants: string[]
+  _id?: string
+  id?: string
+  threadId: string
+  participants?: string[]
   lastMessage: string
   lastMessageAt: string
+  senderCompanyId?: string
+  recipientCompanyId?: string
   unreadCount?: number
 }
 
 export interface MessageItem {
-  id: string
+  _id?: string
+  id?: string
+  threadId: string
   senderCompanyId: string
+  recipientCompanyId?: string
   text: string
   timestamp: string
+  read?: boolean
 }
 
 export const messagesApi = createApi({
@@ -38,7 +46,6 @@ export const messagesApi = createApi({
     getThreads: builder.query<MessageThread[], void>({
       query: () => '/messages/threads',
       providesTags: ['Messages'],
-      pollingInterval: 5000,
     }),
     getThreadMessages: builder.query<MessageItem[], string>({
       query: (threadId) => `/messages/${threadId}`,
@@ -50,7 +57,10 @@ export const messagesApi = createApi({
         method: 'POST',
         body: { senderCompanyId, text },
       }),
-      invalidatesTags: (result, error, { threadId }) => [{ type: 'Messages', id: threadId }],
+      invalidatesTags: () => [
+        'Messages', // Очищаем весь кэш messages
+        { type: 'Messages' }, // Очищаем все messages теги
+      ],
     }),
   }),
 })

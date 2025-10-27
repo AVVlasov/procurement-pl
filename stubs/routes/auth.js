@@ -4,6 +4,17 @@ const { generateToken } = require('../middleware/auth');
 const User = require('../models/User');
 const Company = require('../models/Company');
 
+// Функция для логирования с проверкой DEV переменной
+const log = (message, data = '') => {
+  if (process.env.DEV === 'true') {
+    if (data) {
+      console.log(message, data);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 // In-memory storage для логирования
 let users = [];
 
@@ -21,6 +32,7 @@ const initializeTestUser = async () => {
         legalForm: 'ООО',
         industry: 'Производство',
         companySize: '50-100',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://test-company.ru',
         verified: true,
         rating: 4.5,
@@ -38,7 +50,7 @@ const initializeTestUser = async () => {
         companyId: company._id
       });
 
-      console.log('✅ Test user initialized');
+      log('✅ Test user initialized');
     }
 
     // Инициализация других тестовых компаний
@@ -50,7 +62,8 @@ const initializeTestUser = async () => {
         ogrn: '1027700132196',
         legalForm: 'ООО',
         industry: 'Строительство',
-        companySize: '100-250',
+        companySize: '51-250',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://stroykomplekt.ru',
         verified: true,
         rating: 4.8,
@@ -65,6 +78,7 @@ const initializeTestUser = async () => {
         legalForm: 'АО',
         industry: 'Строительство',
         companySize: '500+',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://moscow-stroy.ru',
         verified: true,
         rating: 4.9,
@@ -78,7 +92,8 @@ const initializeTestUser = async () => {
         ogrn: '1027700132198',
         legalForm: 'ООО',
         industry: 'IT',
-        companySize: '50-100',
+        companySize: '11-50',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://techproject.ru',
         verified: true,
         rating: 4.6,
@@ -91,8 +106,9 @@ const initializeTestUser = async () => {
         inn: '7707083897',
         ogrn: '1027700132199',
         legalForm: 'ООО',
-        industry: 'Торговля',
-        companySize: '100-250',
+        industry: 'Оптовая торговля',
+        companySize: '51-250',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://torgpartner.ru',
         verified: true,
         rating: 4.3,
@@ -106,7 +122,8 @@ const initializeTestUser = async () => {
         ogrn: '1027700132200',
         legalForm: 'ООО',
         industry: 'Энергетика',
-        companySize: '250-500',
+        companySize: '251-500',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://energoplus.ru',
         verified: true,
         rating: 4.7,
@@ -119,7 +136,7 @@ const initializeTestUser = async () => {
       const existingCompany = await Company.findOne({ inn: mockCompanyData.inn });
       if (!existingCompany) {
         await Company.create(mockCompanyData);
-        console.log(`✅ Mock company created: ${mockCompanyData.fullName}`);
+        log(`✅ Mock company created: ${mockCompanyData.fullName}`);
       }
     }
   } catch (error) {
@@ -160,11 +177,12 @@ router.post('/register', async (req, res) => {
         verified: false,
         rating: 0,
         description: '',
-        slogan: ''
+        slogan: '',
+        partnerGeography: ['moscow', 'russia_all']
       });
       const savedCompany = await company.save();
       company = savedCompany;
-      console.log('✅ Company saved:', company._id, 'Result:', savedCompany ? 'Success' : 'Failed');
+      log('✅ Company saved:', company._id, 'Result:', savedCompany ? 'Success' : 'Failed');
     } catch (err) {
       console.error('Company save error:', err);
       return res.status(400).json({ error: 'Failed to create company: ' + err.message });
@@ -182,9 +200,9 @@ router.post('/register', async (req, res) => {
         companyId: company._id
       });
 
-      console.log('✅ User created:', newUser._id);
+      log('✅ User created:', newUser._id);
 
-      const token = generateToken(newUser._id.toString(), newUser.companyId.toString());
+      const token = generateToken(newUser._id.toString(), newUser.companyId.toString(), newUser.firstName, newUser.lastName, company.fullName);
       return res.status(201).json({
         tokens: {
           accessToken: token,
@@ -242,7 +260,8 @@ router.post('/login', async (req, res) => {
         ogrn: '1027700132196',
         legalForm: 'ООО',
         industry: 'Строительство',
-        companySize: '100-250',
+        companySize: '51-250',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://stroykomplekt.ru',
         verified: true,
         rating: 4.8,
@@ -257,6 +276,7 @@ router.post('/login', async (req, res) => {
         legalForm: 'АО',
         industry: 'Строительство',
         companySize: '500+',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://moscow-stroy.ru',
         verified: true,
         rating: 4.9,
@@ -270,7 +290,8 @@ router.post('/login', async (req, res) => {
         ogrn: '1027700132198',
         legalForm: 'ООО',
         industry: 'IT',
-        companySize: '50-100',
+        companySize: '11-50',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://techproject.ru',
         verified: true,
         rating: 4.6,
@@ -283,8 +304,9 @@ router.post('/login', async (req, res) => {
         inn: '7707083897',
         ogrn: '1027700132199',
         legalForm: 'ООО',
-        industry: 'Торговля',
-        companySize: '100-250',
+        industry: 'Оптовая торговля',
+        companySize: '51-250',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://torgpartner.ru',
         verified: true,
         rating: 4.3,
@@ -298,7 +320,8 @@ router.post('/login', async (req, res) => {
         ogrn: '1027700132200',
         legalForm: 'ООО',
         industry: 'Энергетика',
-        companySize: '250-500',
+        companySize: '251-500',
+        partnerGeography: ['moscow', 'russia_all'],
         website: 'https://energoplus.ru',
         verified: true,
         rating: 4.7,
@@ -318,12 +341,17 @@ router.post('/login', async (req, res) => {
       }
     }
 
-    const token = generateToken(user._id.toString(), user.companyId.toString());
-    console.log('✅ Token generated for user:', user._id);
-    
-    // Получить компанию
-    const company = await Company.findById(user.companyId);
+    // Получить компанию до использования в generateToken
+    let companyData = null;
+    try {
+      companyData = await Company.findById(user.companyId);
+    } catch (err) {
+      console.error('Failed to fetch company:', err.message);
+    }
 
+    const token = generateToken(user._id.toString(), user.companyId.toString(), user.firstName, user.lastName, companyData?.fullName || 'Company');
+    log('✅ Token generated for user:', user._id);
+    
     res.json({
       tokens: {
         accessToken: token,
@@ -337,10 +365,10 @@ router.post('/login', async (req, res) => {
         position: user.position,
         companyId: user.companyId.toString()
       },
-      company: company ? {
-        id: company._id.toString(),
-        name: company.fullName,
-        inn: company.inn
+      company: companyData ? {
+        id: companyData._id.toString(),
+        name: companyData.fullName,
+        inn: companyData.inn
       } : null
     });
   } catch (error) {

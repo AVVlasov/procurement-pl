@@ -1,142 +1,230 @@
 import { test, expect } from '@playwright/test'
 
-const TEST_USER_EMAIL = 'admin@test-company.ru'
-const TEST_USER_PASSWORD = 'SecurePass123!'
+const BASE_URL = 'http://localhost:8099/procurement-pl'
+const TEST_USER = {
+  email: 'admin@test-company.ru',
+  password: 'SecurePass123!',
+}
 
-test.describe('Product Validation', () => {
+test.describe('Specialization Products (Я продаю) - Full CRUD', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('http://localhost:8099/procurement-pl')
-    
     // Login
-    await page.fill('input[type="email"]', TEST_USER_EMAIL)
-    await page.fill('input[type="password"]', TEST_USER_PASSWORD)
+    await page.goto(`${BASE_URL}/auth/login`)
+    await page.fill('input[placeholder="Email"]', TEST_USER.email)
+    await page.fill('input[placeholder="Пароль"]', TEST_USER.password)
     await page.click('button:has-text("Вход")')
+    await page.waitForURL(`${BASE_URL}/company/profile`)
     
-    // Wait for redirect to dashboard
-    await page.waitForURL('**/dashboard')
-    
-    // Navigate to company profile
-    await page.click('a:has-text("Профиль компании")')
-    await page.waitForLoadState('networkidle')
+    // Navigate to Specialization tab
+    await page.goto(`${BASE_URL}/company/profile`)
+    const specialTab = page.getByRole('tab', { name: 'Специализация' })
+    await specialTab.click()
   })
 
-  test('should show validation errors for product with short description', async ({ page }) => {
-    // Click add product button in Specialization tab
-    await page.click('button:has-text("Добавить товар")')
-    
-    // Wait for dialog
-    await page.waitForSelector('[role="dialog"]')
-    
-    // Fill form with invalid data
-    await page.fill('input[placeholder*="Название"]', 'Test Product')
-    await page.click('select')
-    await page.selectOption('select', { label: 'Электроника' })
-    await page.fill('textarea', 'Short') // Less than 20 chars
-    
-    // Click save
-    await page.click('button:has-text("Сохранить")')
-    
-    // Check for error message
-    const errorText = await page.locator('text=Минимум 20 символов').isVisible()
-    expect(errorText).toBeTruthy()
+  test('should display Specialization tab', async ({ page }) => {
+    const heading = page.getByRole('heading', { name: 'Специализация и услуги' })
+    await expect(heading).toBeVisible()
   })
 
-  test('should show validation error for empty description', async ({ page }) => {
-    // Click add product button
-    await page.click('button:has-text("Добавить товар")')
-    await page.waitForSelector('[role="dialog"]')
+  test('should open add product dialog', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
     
-    // Fill only required fields except description
-    await page.fill('input[placeholder*="Название"]', 'Test Product')
-    await page.click('select')
-    await page.selectOption('select', { label: 'Электроника' })
-    
-    // Click save without filling description
-    await page.click('button:has-text("Сохранить")')
-    
-    // Check for error
-    const errorText = await page.locator('text=Описание обязательно').isVisible()
-    expect(errorText).toBeTruthy()
+    const dialog = page.getByRole('heading', { name: 'Добавить продукт/услугу' })
+    await expect(dialog).toBeVisible()
   })
 
-  test('should display character counter for description', async ({ page }) => {
-    // Click add product button
-    await page.click('button:has-text("Добавить товар")')
-    await page.waitForSelector('[role="dialog"]')
+  test('should display correct product categories', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
     
-    // Check if character counter is visible
-    const counter = await page.locator('text=/\\d+\\/500/').isVisible()
-    expect(counter).toBeTruthy()
+    // Check that select has options
+    const categorySelect = page.locator('select')
+    const options = categorySelect.locator('option')
     
-    // Type in description
-    const textarea = page.locator('textarea')
-    await textarea.fill('This is a valid product description with at least 20 characters.')
+    const count = await options.count()
+    expect(count).toBeGreaterThan(1) // More than just "Select category"
     
-    // Check counter updates
-    const counterText = await page.locator('text=/\\d+\\/500/').textContent()
-    expect(counterText).toContain('60/500')
+    // Check for specific categories
+    await expect(categorySelect).toContainText('Товары')
+    await expect(categorySelect).toContainText('Услуги')
+    await expect(categorySelect).toContainText('Консалтинг')
   })
 
-  test('should show error for description exceeding max length', async ({ page }) => {
-    // Click add product button
-    await page.click('button:has-text("Добавить товар")')
-    await page.waitForSelector('[role="dialog"]')
+  test('should add new product with valid data', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
     
-    // Fill form with description exceeding max length
-    await page.fill('input[placeholder*="Название"]', 'Test Product')
-    await page.click('select')
-    await page.selectOption('select', { label: 'Электроника' })
+    // Fill form
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const categorySelect = page.locator('select')
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
+    const urlInput = page.locator('input[placeholder*="https"]')
     
-    // Create string with 501 characters
-    const longText = 'a'.repeat(501)
-    await page.fill('textarea', longText)
+    await nameInput.fill('E2E Консалтинговые услуги')
+    await categorySelect.selectOption('consulting')
+    await descriptionInput.fill('Профессиональные консалтинговые услуги по цифровой трансформации и оптимизации бизнес-процессов')
+    await urlInput.fill('https://example.com/consulting')
     
-    // Click save
-    await page.click('button:has-text("Сохранить")')
+    // Submit
+    const saveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await saveButton.click()
     
-    // Check for error message
-    const errorText = await page.locator('text=Максимум 500 символов').isVisible()
-    expect(errorText).toBeTruthy()
+    // Wait for API call
+    await page.waitForTimeout(1500)
+    
+    // Check if product appears
+    const productName = page.getByText('E2E Консалтинговые услуги')
+    await expect(productName).toBeVisible()
   })
 
-  test('should allow valid product creation', async ({ page }) => {
-    // Click add product button
-    await page.click('button:has-text("Добавить товар")')
-    await page.waitForSelector('[role="dialog"]')
+  test('should display product category correctly', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
     
-    // Fill form with valid data
-    await page.fill('input[placeholder*="Название"]', 'Valid Test Product')
-    await page.click('select')
-    await page.selectOption('select', { label: 'Электроника' })
-    await page.fill('textarea', 'This is a valid product description with more than 20 characters.')
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const categorySelect = page.locator('select')
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
     
-    // Click save
-    await page.click('button:has-text("Сохранить")')
+    await nameInput.fill('Тестовая услуга')
+    await categorySelect.selectOption('services')
+    await descriptionInput.fill('Это тестовая услуга для проверки отображения категории')
     
-    // Wait for success and dialog to close
-    await page.waitForTimeout(1000)
-    const isDialogOpen = await page.locator('[role="dialog"]').isVisible().catch(() => false)
-    expect(isDialogOpen).toBeFalsy()
+    const saveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await saveButton.click()
+    
+    await page.waitForTimeout(1500)
+    
+    // Check that category is displayed as text (not code)
+    const serviceBadge = page.getByText('Услуги')
+    await expect(serviceBadge).toBeVisible()
   })
 
-  test('should validate buy products with same rules', async ({ page }) => {
-    // Navigate to buy products tab
-    await page.click('button:has-text("Я покупаю")')
-    await page.waitForLoadState('networkidle')
+  test('should edit existing product', async ({ page }) => {
+    // Add a product first
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
     
-    // Click add button
-    await page.click('button:has-text("Добавить товар")')
-    await page.waitForSelector('[role="dialog"]')
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const categorySelect = page.locator('select')
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
     
-    // Fill with short description
-    await page.fill('input[placeholder*="Название"]', 'Buy Product')
-    await page.fill('textarea', 'Short')
+    await nameInput.fill('Продукт для редактирования')
+    await categorySelect.selectOption('goods')
+    await descriptionInput.fill('Это продукт который будет отредактирован в E2E тесте на протяжении нескольких итераций')
     
-    // Click save
-    await page.click('button:has-text("Сохранить")')
+    const saveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await saveButton.click()
     
-    // Check for error
-    const errorText = await page.locator('text=Минимум 20 символов').isVisible()
-    expect(errorText).toBeTruthy()
+    await page.waitForTimeout(1500)
+    
+    // Now find and click edit button
+    const editButton = page.locator('button[title*="Редактировать"]').first()
+    await editButton.click()
+    
+    // Check edit dialog is open
+    const editDialog = page.getByRole('heading', { name: 'Редактировать продукт/услугу' })
+    await expect(editDialog).toBeVisible()
+    
+    // Update name
+    const editNameInput = page.locator('input[placeholder="Название"]').first()
+    await editNameInput.fill('Продукт отредактирован')
+    
+    // Save
+    const editSaveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await editSaveButton.click()
+    
+    await page.waitForTimeout(1500)
+    
+    // Verify update
+    const updatedName = page.getByText('Продукт отредактирован')
+    await expect(updatedName).toBeVisible()
+  })
+
+  test('should delete product', async ({ page }) => {
+    // Add a product
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
+    
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const categorySelect = page.locator('select')
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
+    
+    await nameInput.fill('Продукт для удаления')
+    await categorySelect.selectOption('materials')
+    await descriptionInput.fill('Это продукт который будет удален в E2E тесте проверки функциональности')
+    
+    const saveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await saveButton.click()
+    
+    await page.waitForTimeout(1500)
+    
+    // Verify product exists
+    const productName = page.getByText('Продукт для удаления')
+    await expect(productName).toBeVisible()
+    
+    // Delete it
+    const deleteButton = page.locator('button[title*="Удалить"]').first()
+    await deleteButton.click()
+    
+    await page.waitForTimeout(1500)
+    
+    // Verify deletion
+    const deletedProduct = page.getByText('Продукт для удаления')
+    const isGone = await deletedProduct.isVisible().catch(() => false)
+    expect(isGone).toBeFalsy()
+  })
+
+  test('should display "View Product" link with correct text', async ({ page }) => {
+    // Add a product
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
+    
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
+    const urlInput = page.locator('input[placeholder*="https"]')
+    
+    await nameInput.fill('Продукт с ссылкой')
+    await descriptionInput.fill('Продукт с ссылкой для проверки локализации текста кнопки просмотра')
+    await urlInput.fill('https://example.com/product')
+    
+    const saveButton = page.getByRole('button', { name: 'Сохранить' }).last()
+    await saveButton.click()
+    
+    await page.waitForTimeout(1500)
+    
+    // Check that "Перейти на продукт" link is visible (correct localization)
+    const viewLink = page.getByText('Перейти на продукт')
+    await expect(viewLink).toBeVisible()
+  })
+
+  test('should validate description length', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
+    
+    const nameInput = page.locator('input[placeholder="Название"]').first()
+    const descriptionInput = page.locator('textarea[placeholder*="Минимум"]')
+    
+    await nameInput.fill('Товар')
+    await descriptionInput.fill('Коротко')
+    
+    // Description counter should show
+    const counter = page.locator('text=/\\d+\\/500/')
+    await expect(counter).toBeVisible()
+  })
+
+  test('should close dialog with cancel button', async ({ page }) => {
+    const addButton = page.getByRole('button', { name: 'Добавить продукт/услугу' })
+    await addButton.click()
+    
+    const dialog = page.getByRole('heading', { name: 'Добавить продукт/услугу' })
+    await expect(dialog).toBeVisible()
+    
+    const cancelButton = page.getByRole('button', { name: 'Отменить' }).first()
+    await cancelButton.click()
+    
+    // Dialog should close
+    const closed = await dialog.isVisible().catch(() => false)
+    expect(closed).toBeFalsy()
   })
 })

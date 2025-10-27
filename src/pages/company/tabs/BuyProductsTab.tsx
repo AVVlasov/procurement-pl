@@ -16,9 +16,18 @@ import {
   Flex,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { FiPlus, FiTrash2, FiDownload, FiFileText, FiEdit2 } from 'react-icons/fi'
+import { FiPlus, FiTrash2, FiDownload, FiFileText, FiEdit2, FiUpload, FiCheck, FiX } from 'react-icons/fi'
 import { useAuth } from '../../../hooks/useAuth'
-import { useGetCompanyBuyProductsQuery, useCreateBuyProductMutation, useUpdateBuyProductMutation, useDeleteBuyProductMutation } from '../../../__data__/api/buyProductsApi'
+import { 
+  useGetCompanyBuyProductsQuery, 
+  useCreateBuyProductMutation, 
+  useUpdateBuyProductMutation, 
+  useDeleteBuyProductMutation,
+  useAddBuyProductFileMutation,
+  useDeleteBuyProductFileMutation,
+  useAcceptBuyProductMutation,
+  useGetBuyProductAcceptancesQuery,
+} from '../../../__data__/api/buyProductsApi'
 import { useToast } from '../../../hooks/useToast'
 
 interface BuyProductForm {
@@ -69,6 +78,9 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
   const [createProduct, { isLoading: isCreating }] = useCreateBuyProductMutation()
   const [updateProduct, { isLoading: isUpdating }] = useUpdateBuyProductMutation()
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteBuyProductMutation()
+  const [addFile] = useAddBuyProductFileMutation()
+  const [deleteFile] = useDeleteBuyProductFileMutation()
+  const [acceptProduct] = useAcceptBuyProductMutation()
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -80,6 +92,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
   })
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<ValidationErrors>({})
+  const [showAcceptances, setShowAcceptances] = useState<string | null>(null)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   const handleAddNew = () => {
@@ -118,6 +131,8 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
     }
 
     try {
+      let productId = editingId
+      
       if (editingId) {
         await updateProduct({
           id: editingId,
@@ -128,19 +143,35 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
         }).unwrap()
         toast.success(t('common:labels.success') || 'Товар обновлен')
       } else {
-        await createProduct({
+        const result = await createProduct({
           name: formData.name,
           description: formData.description,
           quantity: formData.quantity,
           unit: formData.unit,
           status: 'published',
         }).unwrap()
+        productId = result._id || result.id
         toast.success(t('common:labels.success') || 'Товар добавлен')
       }
+
+      // Upload files if any
+      if (selectedFiles.length > 0 && productId) {
+        for (const file of selectedFiles) {
+          const formDataFile = new FormData()
+          formDataFile.append('file', file)
+          try {
+            await addFile({ id: productId, file }).unwrap()
+          } catch (err) {
+            console.error('Error uploading file:', err)
+          }
+        }
+      }
+
       setIsFormOpen(false)
       setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
       setSelectedFiles([])
       setErrors({})
+      await refetch()
     } catch (error) {
       toast.error(t('common:errors.server_error') || 'Ошибка при сохранении')
     }
@@ -150,9 +181,27 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
     try {
       await deleteProduct(id).unwrap()
       toast.success(t('common:labels.success') || 'Товар удален')
+      await refetch()
     } catch (error) {
       toast.error(t('common:errors.server_error') || 'Ошибка при удалении')
     }
+  }
+
+  const handleAcceptProduct = async (id: string) => {
+    try {
+      await acceptProduct(id).unwrap()
+      toast.success('Товар акцептирован')
+      await refetch()
+    } catch (error) {
+      toast.error('Ошибка при акцепте')
+    }
+  }
+
+  const isProductAccepted = (product: any) => {
+    return product.acceptedBy?.some((a: any) => {
+      const compId = typeof a.companyId === 'string' ? a.companyId : a.companyId?._id
+      return compId === company?.id
+    })
   }
 
   return (
@@ -181,7 +230,8 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                 <Table.ColumnHeader>{t('common:labels.name') || 'Название'}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.description') || 'Описание'}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.quantity') || 'Количество'}</Table.ColumnHeader>
-                <Table.ColumnHeader>{t('common:labels.status') || 'Статус'}</Table.ColumnHeader>
+                <Table.ColumnHeader>Файлы</Table.ColumnHeader>
+                <Table.ColumnHeader>Акцепты</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.actions') || 'Действия'}</Table.ColumnHeader>
               </Table.Row>
             </Table.Header>
@@ -197,12 +247,34 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                     {product.quantity} {product.unit}
                   </Table.Cell>
                   <Table.Cell>
-                    <Badge colorPalette={product.status === 'published' ? 'green' : 'yellow'}>
-                      {product.status === 'published' ? 'Опубликовано' : 'Черновик'}
+                    <Badge colorPalette="blue">
+                      {product.files?.length || 0}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setShowAcceptances(showAcceptances === product._id ? null : product._id)}
+                    >
+                      {product.acceptedBy?.length || 0}
+                    </Button>
+                  </Table.Cell>
+                  <Table.Cell>
                     <HStack gap={2}>
+                      {!isEditingOwn && !isProductAccepted(product) && (
+                        <Button
+                          size="sm"
+                          colorPalette="green"
+                          onClick={() => handleAcceptProduct(product._id)}
+                          title="Акцептировать"
+                        >
+                          <FiCheck />
+                        </Button>
+                      )}
+                      {!isEditingOwn && isProductAccepted(product) && (
+                        <Badge colorPalette="green">Акцептировано</Badge>
+                      )}
                       {isEditingOwn && (
                         <>
                           <IconButton
@@ -233,6 +305,33 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
               ))}
             </Table.Body>
           </Table.Root>
+
+          {/* Acceptances Details */}
+          {showAcceptances && (
+            <Box p={4} mt={4} borderWidth="1px" borderRadius="lg" bg="gray.50">
+              <Text fontWeight="bold" mb={3}>
+                Компании которые акцептовали:
+              </Text>
+              <VStack gap={2} align="stretch">
+                {products.find((p: any) => p._id === showAcceptances)?.acceptedBy?.length > 0 ? (
+                  products.find((p: any) => p._id === showAcceptances)?.acceptedBy?.map((a: any, idx: number) => (
+                    <Box key={idx} p={2} borderWidth="1px" borderRadius="md" bg="white">
+                      <Text fontSize="sm">
+                        {typeof a.companyId === 'string' 
+                          ? a.companyId 
+                          : (a.companyId?.shortName || a.companyId?.fullName || 'Неизвестная компания')}
+                      </Text>
+                      <Text fontSize="xs" color="gray.500">
+                        {new Date(a.acceptedAt).toLocaleString('ru-RU')}
+                      </Text>
+                    </Box>
+                  ))
+                ) : (
+                  <Text color="gray.500" fontSize="sm">Нет акцептов</Text>
+                )}
+              </VStack>
+            </Box>
+          )}
         </Box>
       ) : (
         <Flex
@@ -330,6 +429,41 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                     />
                   </Field.Root>
                 </HStack>
+
+                {isEditingOwn && (
+                  <Field.Root>
+                    <Field.Label>Загрузить файлы</Field.Label>
+                    <Input
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept=".doc,.docx,.xls,.xlsx,.pdf"
+                      onChange={handleFileSelect}
+                      display="none"
+                    />
+                    <Button
+                      colorPalette="gray"
+                      variant="outline"
+                      width="full"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <FiUpload />
+                      Выбрать файлы (DOC, XLS, PDF)
+                    </Button>
+                    {selectedFiles.length > 0 && (
+                      <VStack gap={2} mt={3} align="start">
+                        <Text fontSize="sm" fontWeight="medium">
+                          Выбранные файлы:
+                        </Text>
+                        {selectedFiles.map((file, idx) => (
+                          <Text key={idx} fontSize="sm" color="gray.600">
+                            {file.name}
+                          </Text>
+                        ))}
+                      </VStack>
+                    )}
+                  </Field.Root>
+                )}
               </VStack>
             </Dialog.Body>
             <Dialog.Footer>

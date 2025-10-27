@@ -1,5 +1,15 @@
 const jwt = require('jsonwebtoken');
 
+const log = (message, data = '') => {
+  if (process.env.DEV === 'true') {
+    if (data) {
+      console.log(message, data);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 const verifyToken = (req, res, next) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
   
@@ -12,7 +22,7 @@ const verifyToken = (req, res, next) => {
     req.userId = decoded.userId;
     req.companyId = decoded.companyId;
     req.user = decoded;
-    console.log('[Auth] Token verified - userId:', decoded.userId, 'companyId:', decoded.companyId);
+    log('[Auth] Token verified - userId:', decoded.userId, 'companyId:', decoded.companyId);
     next();
   } catch (error) {
     console.error('[Auth] Token verification failed:', error.message);
@@ -20,10 +30,10 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-const generateToken = (userId, companyId) => {
-  console.log('[Auth] Generating token for userId:', userId, 'companyId:', companyId);
+const generateToken = (userId, companyId, firstName = '', lastName = '', companyName = '') => {
+  log('[Auth] Generating token for userId:', userId, 'companyId:', companyId);
   return jwt.sign(
-    { userId, companyId },
+    { userId, companyId, firstName, lastName, companyName },
     process.env.JWT_SECRET || 'your-secret-key',
     { expiresIn: '7d' }
   );

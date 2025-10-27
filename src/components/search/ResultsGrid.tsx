@@ -5,7 +5,6 @@ import {
   HStack,
   Text,
   NativeSelect,
-  SimpleGrid,
   Spinner,
   Flex,
   Button,
@@ -82,19 +81,25 @@ export const ResultsGrid = ({
   return (
     <VStack gap={6} align="stretch">
       {/* Header */}
-      <HStack justify="space-between" flexWrap="wrap">
-        <Text fontSize="lg" fontWeight="bold">
+      <Flex 
+        justify="space-between" 
+        align="center"
+        gap={{ base: 2, md: 4, lg: 6 }}
+        flexWrap={{ base: 'wrap', md: 'nowrap' }}
+      >
+        <Text fontSize={{ base: 'md', md: 'lg' }} fontWeight="bold" flex={{ base: '1 1 100%', md: 'initial' }}>
           {t('results.found', { count: total })}
         </Text>
         
-        <HStack gap={4}>
-          <Text fontSize="sm" color="gray.600">
+        <HStack gap={{ base: 2, md: 3, lg: 4 }} flexWrap={{ base: 'nowrap' }} ml="auto">
+          <Text fontSize={{ base: 'xs', md: 'sm' }} color="gray.600" whiteSpace="nowrap">
             {t('sort.label')}:
           </Text>
-          <NativeSelect.Root size="sm" w="200px">
+          <NativeSelect.Root size={{ base: 'sm', md: 'md' }} w={{ base: 'auto', md: '180px', lg: '200px' }} minW="150px">
             <NativeSelect.Field
               value={`${filters.sortBy || 'relevance'}-${filters.sortOrder || 'desc'}`}
               onChange={(e) => handleSortChange(e.target.value)}
+              fontSize={{ base: 'sm', md: 'md' }}
             >
               <option value="relevance-desc">{t('sort.relevance')}</option>
               <option value="rating-desc">{t('sort.rating')} ({t('sort.desc')})</option>
@@ -105,10 +110,18 @@ export const ResultsGrid = ({
             <NativeSelect.Indicator />
           </NativeSelect.Root>
         </HStack>
-      </HStack>
+      </Flex>
 
       {/* Results Grid */}
-      <SimpleGrid columns={{ base: 1, lg: 2 }} gap={6}>
+      <Box
+        display="grid"
+        gridTemplateColumns={{
+          base: '1fr',
+          md: 'repeat(auto-fit, minmax(300px, 1fr))',
+          lg: 'repeat(auto-fit, minmax(350px, 1fr))',
+        }}
+        gap={{ base: 4, md: 5, lg: 6 }}
+      >
         {companies.map((company) => (
           <CompanyCard
             key={company.id}
@@ -118,7 +131,7 @@ export const ResultsGrid = ({
             isFavorite={favoriteIds.includes(company.id)}
           />
         ))}
-      </SimpleGrid>
+      </Box>
 
       {/* Pagination placeholder */}
       {total > (filters.limit || 10) && (

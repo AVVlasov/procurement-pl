@@ -54,8 +54,8 @@ export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) 
   const reviews: Review[] = (reviewsData || []).map((review: any) => ({
     id: review._id || review.id,
     author: {
-      name: review.authorName,
-      company: review.authorCompany,
+      name: review.authorName && review.authorName.trim() !== 'undefined undefined' ? review.authorName : 'Аноним',
+      company: review.authorCompany && review.authorCompany !== 'Company' ? review.authorCompany : 'Компания',
       avatar: '',
     },
     rating: review.rating,

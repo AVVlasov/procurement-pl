@@ -1,16 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
+const Review = require('../models/Review');
 
-// In-memory storage for reviews
-let reviews = [];
-
-// Reference to companies from search routes
-let companies = [];
-
-// Синхронизация с companies из других routes
-const syncCompanies = () => {
-  // После создания review обновляем рейтинг компании
+// Функция для логирования с проверкой DEV переменной
+const log = (message, data = '') => {
+  if (process.env.DEV === 'true') {
+    if (data) {
+      console.log(message, data);
+    } else {
+      console.log(message);
+    }
+  }
 };
 
 // GET /reviews/company/:companyId - получить отзывы компании
@@ -18,15 +19,15 @@ router.get('/company/:companyId', verifyToken, async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    const companyReviews = reviews
-      .filter(r => r.companyId === companyId)
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const companyReviews = await Review.find({ companyId })
+      .sort({ createdAt: -1 })
+      .exec();
 
-    console.log('[Reviews] Returned', companyReviews.length, 'reviews for company', companyId);
+    log('[Reviews] Returned', companyReviews.length, 'reviews for company', companyId);
 
     res.json(companyReviews);
   } catch (error) {
-    console.error('[Reviews] Error:', error.message);
+    console.error('[Reviews] Error fetching reviews:', error.message);
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,
@@ -51,15 +52,14 @@ router.post('/', verifyToken, async (req, res) => {
       });
     }
 
-    if (comment.length < 10 || comment.length > 1000) {
+    if (comment.trim().length < 10 || comment.trim().length > 1000) {
       return res.status(400).json({
         error: 'Comment must be between 10 and 1000 characters',
       });
     }
 
     // Создать новый отзыв
-    const newReview = {
-      _id: 'review-' + Date.now(),
+    const newReview = new Review({
       companyId,
       authorCompanyId: req.user.companyId,
       authorName: req.user.firstName + ' ' + req.user.lastName,
@@ -69,15 +69,15 @@ router.post('/', verifyToken, async (req, res) => {
       verified: true,
       createdAt: new Date(),
       updatedAt: new Date()
-    };
+    });
 
-    reviews.push(newReview);
+    const savedReview = await newReview.save();
 
-    console.log('[Reviews] New review created:', newReview._id);
+    log('[Reviews] New review created:', savedReview._id);
 
-    res.status(201).json(newReview);
+    res.status(201).json(savedReview);
   } catch (error) {
-    console.error('[Reviews] Error:', error.message);
+    console.error('[Reviews] Error creating review:', error.message);
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,

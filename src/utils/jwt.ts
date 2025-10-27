@@ -20,8 +20,23 @@ export const decodeJWT = (token: string): JWTPayload | null => {
       return null
     }
 
-    // Decode the payload (second part)
-    const payload = JSON.parse(atob(parts[1]))
+    // Decode the payload (second part) with proper UTF-8 support
+    const base64 = parts[1]
+    // Replace URL-safe base64 characters
+    const base64Padded = base64.replace(/-/g, '+').replace(/_/g, '/')
+    // Add padding if needed
+    const padding = 4 - (base64Padded.length % 4)
+    const base64Correct = padding !== 4 ? base64Padded + '='.repeat(padding) : base64Padded
+    
+    // Decode with UTF-8 support
+    const binaryString = atob(base64Correct)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+    const text = new TextDecoder().decode(bytes)
+    const payload = JSON.parse(text)
+    
     return payload as JWTPayload
   } catch (error) {
     console.error('Failed to decode JWT:', error)

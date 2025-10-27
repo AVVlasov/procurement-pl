@@ -31,10 +31,13 @@
     "add_product": "Добавить продукт/услугу",
     "product_name": "Название",
     "category": "Категория",
+    "select_category": "Выберите категорию",
     "description": "Описание",
     "product_url": "Ссылка на продукт",
+    "view_product": "Перейти на продукт",
     "files": "Файлы",
     "upload_file": "Загрузить файл",
+    "edit_product": "Редактировать продукт/услугу",
     "file_types": {
       "commercial_offer": "Коммерческое предложение",
       "technical_specs": "Техническое задание",

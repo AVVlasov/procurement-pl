@@ -3,18 +3,29 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const BuyProduct = require('../models/BuyProduct');
 
+// Функция для логирования с проверкой DEV переменной
+const log = (message, data = '') => {
+  if (process.env.DEV === 'true') {
+    if (data) {
+      console.log(message, data);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 // GET /buy-products/company/:companyId - получить товары компании
 router.get('/company/:companyId', verifyToken, async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    console.log('[BuyProducts] Fetching products for company:', companyId);
+    log('[BuyProducts] Fetching products for company:', companyId);
     const products = await BuyProduct.find({ companyId })
       .sort({ createdAt: -1 })
       .exec();
 
-    console.log('[BuyProducts] Found', products.length, 'products for company', companyId);
-    console.log('[BuyProducts] Products:', products);
+    log('[BuyProducts] Found', products.length, 'products for company', companyId);
+    log('[BuyProducts] Products:', products);
 
     res.json(products);
   } catch (error) {
@@ -32,7 +43,7 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, description, quantity, unit, status } = req.body;
 
-    console.log('[BuyProducts] Creating new product:', { name, description, quantity, companyId: req.user.companyId });
+    log('[BuyProducts] Creating new product:', { name, description, quantity, companyId: req.user.companyId });
 
     if (!name || !description || !quantity) {
       return res.status(400).json({
@@ -56,11 +67,11 @@ router.post('/', verifyToken, async (req, res) => {
       files: [],
     });
 
-    console.log('[BuyProducts] Attempting to save product to DB...');
+    log('[BuyProducts] Attempting to save product to DB...');
     const savedProduct = await newProduct.save();
 
-    console.log('[BuyProducts] New product created successfully:', savedProduct._id);
-    console.log('[BuyProducts] Product data:', savedProduct);
+    log('[BuyProducts] New product created successfully:', savedProduct._id);
+    log('[BuyProducts] Product data:', savedProduct);
 
     res.status(201).json(savedProduct);
   } catch (error) {
@@ -100,7 +111,7 @@ router.put('/:id', verifyToken, async (req, res) => {
 
     const updatedProduct = await product.save();
 
-    console.log('[BuyProducts] Product updated:', id);
+    log('[BuyProducts] Product updated:', id);
 
     res.json(updatedProduct);
   } catch (error) {
@@ -129,11 +140,150 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     await BuyProduct.findByIdAndDelete(id);
 
-    console.log('[BuyProducts] Product deleted:', id);
+    log('[BuyProducts] Product deleted:', id);
 
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('[BuyProducts] Error:', error.message);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
+// POST /buy-products/:id/files - добавить файл к товару
+router.post('/:id/files', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fileName, fileUrl, fileType, fileSize } = req.body;
+
+    const product = await BuyProduct.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Только владелец товара может добавить файл
+    if (product.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const file = {
+      id: 'file-' + Date.now(),
+      name: fileName,
+      url: fileUrl,
+      type: fileType,
+      size: fileSize,
+      uploadedAt: new Date()
+    };
+
+    product.files.push(file);
+    await product.save();
+
+    log('[BuyProducts] File added to product:', id);
+
+    res.json(product);
+  } catch (error) {
+    console.error('[BuyProducts] Error adding file:', error.message);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
+// DELETE /buy-products/:id/files/:fileId - удалить файл
+router.delete('/:id/files/:fileId', verifyToken, async (req, res) => {
+  try {
+    const { id, fileId } = req.params;
+
+    const product = await BuyProduct.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    if (product.companyId.toString() !== req.user.companyId.toString()) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    product.files = product.files.filter(f => f.id !== fileId);
+    await product.save();
+
+    log('[BuyProducts] File deleted from product:', id);
+
+    res.json(product);
+  } catch (error) {
+    console.error('[BuyProducts] Error deleting file:', error.message);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
+// POST /buy-products/:id/accept - акцептировать товар
+router.post('/:id/accept', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const companyId = req.user.companyId;
+
+    const product = await BuyProduct.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Не можем акцептировать собственный товар
+    if (product.companyId.toString() === companyId.toString()) {
+      return res.status(403).json({ error: 'Cannot accept own product' });
+    }
+
+    // Проверить, не акцептировал ли уже
+    const alreadyAccepted = product.acceptedBy.some(
+      a => a.companyId.toString() === companyId.toString()
+    );
+
+    if (alreadyAccepted) {
+      return res.status(400).json({ error: 'Already accepted' });
+    }
+
+    product.acceptedBy.push({
+      companyId,
+      acceptedAt: new Date()
+    });
+
+    await product.save();
+
+    log('[BuyProducts] Product accepted by company:', companyId);
+
+    res.json(product);
+  } catch (error) {
+    console.error('[BuyProducts] Error accepting product:', error.message);
+    res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+    });
+  }
+});
+
+// GET /buy-products/:id/acceptances - получить компании которые акцептовали
+router.get('/:id/acceptances', verifyToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await BuyProduct.findById(id).populate('acceptedBy.companyId', 'shortName fullName');
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    log('[BuyProducts] Returned acceptances for product:', id);
+
+    res.json(product.acceptedBy);
+  } catch (error) {
+    console.error('[BuyProducts] Error fetching acceptances:', error.message);
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,

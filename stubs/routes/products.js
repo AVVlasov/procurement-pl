@@ -3,6 +3,17 @@ const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const Product = require('../models/Product');
 
+// Функция для логирования с проверкой DEV переменной
+const log = (message, data = '') => {
+  if (process.env.DEV === 'true') {
+    if (data) {
+      console.log(message, data);
+    } else {
+      console.log(message);
+    }
+  }
+};
+
 // Helper to transform _id to id
 const transformProduct = (doc) => {
   if (!doc) return null;
@@ -19,13 +30,13 @@ router.get('/', verifyToken, async (req, res) => {
   try {
     const companyId = req.user.companyId;
 
-    console.log('[Products] GET Fetching products for companyId:', companyId);
+    log('[Products] GET Fetching products for companyId:', companyId);
     
     const products = await Product.find({ companyId })
       .sort({ createdAt: -1 })
       .exec();
 
-    console.log('[Products] Found', products.length, 'products');
+    log('[Products] Found', products.length, 'products');
     res.json(products.map(transformProduct));
   } catch (error) {
     console.error('[Products] Get error:', error.message);
@@ -39,7 +50,7 @@ router.post('/', verifyToken, async (req, res) => {
     const { name, category, description, type, productUrl, price, unit, minOrder } = req.body;
     const companyId = req.user.companyId;
 
-    console.log('[Products] POST Creating product:', { name, category, type });
+    log('[Products] POST Creating product:', { name, category, type });
 
     // // Валидация
     // if (!name || !category || !description || !type) {
@@ -63,7 +74,7 @@ router.post('/', verifyToken, async (req, res) => {
     });
 
     const savedProduct = await newProduct.save();
-    console.log('[Products] Product created with ID:', savedProduct._id);
+    log('[Products] Product created with ID:', savedProduct._id);
 
     res.status(201).json(transformProduct(savedProduct));
   // } catch (error) {
@@ -96,7 +107,7 @@ router.put('/:id', verifyToken, async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    console.log('[Products] Product updated:', id);
+    log('[Products] Product updated:', id);
     res.json(transformProduct(updatedProduct));
   } catch (error) {
     console.error('[Products] Update error:', error.message);
@@ -127,7 +138,7 @@ router.patch('/:id', verifyToken, async (req, res) => {
       { new: true, runValidators: true }
     );
 
-    console.log('[Products] Product patched:', id);
+    log('[Products] Product patched:', id);
     res.json(transformProduct(updatedProduct));
   } catch (error) {
     console.error('[Products] Patch error:', error.message);
@@ -153,7 +164,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
 
     await Product.findByIdAndDelete(id);
 
-    console.log('[Products] Product deleted:', id);
+    log('[Products] Product deleted:', id);
     res.json({ message: 'Product deleted successfully' });
   } catch (error) {
     console.error('[Products] Delete error:', error.message);

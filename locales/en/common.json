@@ -32,7 +32,9 @@
     "description": "Description",
     "message": "Message",
     "actions": "Actions",
-    "fill_required_fields": "Please fill in all required fields"
+    "fill_required_fields": "Please fill in all required fields",
+    "name": "Name",
+    "quantity": "Quantity"
   },
   "errors": {
     "required_field": "This field is required",
@@ -130,7 +132,9 @@
     "bulkTab": "Distribution",
     "productsDescription": "List of products you offer",
     "productsEmpty": "Products will be displayed here",
-    "select_file": "Please select a file"
+    "select_file": "Please select a file",
+    "sentTab": "Sent Requests",
+    "receivedTab": "Received Requests"
   },
   "report": {
     "title": "Final Report",

@@ -77,6 +77,21 @@ const recreateTestUser = async () => {
     console.log('   Пароль: SecurePass123!');
     console.log('');
 
+    // Обновить существующие mock компании
+    console.log('\n🔄 Обновление существующих mock компаний...');
+    const updates = [
+      { inn: '7707083894', updates: { companySize: '51-250', partnerGeography: ['moscow', 'russia_all'] } },
+      { inn: '7707083895', updates: { companySize: '500+', partnerGeography: ['moscow', 'russia_all'] } },
+      { inn: '7707083896', updates: { companySize: '11-50', partnerGeography: ['moscow', 'russia_all'] } },
+      { inn: '7707083897', updates: { companySize: '51-250', partnerGeography: ['moscow', 'russia_all'] } },
+      { inn: '7707083898', updates: { companySize: '251-500', partnerGeography: ['moscow', 'russia_all'] } },
+    ];
+
+    for (const item of updates) {
+      await Company.updateOne({ inn: item.inn }, { $set: item.updates });
+      console.log(`   ✓ Компания обновлена: INN ${item.inn}`);
+    }
+
     await mongoose.connection.close();
     process.exit(0);
   } catch (error) {

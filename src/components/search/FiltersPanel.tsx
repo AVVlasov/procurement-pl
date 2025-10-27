@@ -21,9 +21,10 @@ interface FiltersPanelProps {
   filters: SearchParams
   onChange: (filters: SearchParams) => void
   onReset: () => void
+  onApply?: () => void
 }
 
-export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) => {
+export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPanelProps) => {
   const { t } = useTranslation('search')
   const bg = colors.bg.primary
   const borderColor = colors.border.primary
@@ -75,6 +76,11 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
     }
   }
 
+  const handleFilterChange = (newFilters: SearchParams) => {
+    // Сброс на первую страницу при изменении фильтров
+    onChange({ ...newFilters, page: 1 })
+  }
+
   return (
     <Box
       bg={bg}
@@ -102,11 +108,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   key={industry.value} 
                   checked={isChecked}
                   onCheckedChange={(details) => {
-                    console.log('[FiltersPanel] Industry changed:', details)
                     handleCheckboxChange(
                       filters.industries || [],
                       industry.value,
-                      (newValues) => onChange({ ...filters, industries: newValues })
+                      (newValues) => handleFilterChange({ ...filters, industries: newValues })
                     )
                   }}
                   _hover={{ bg: 'gray.50' }}
@@ -132,11 +137,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   key={size.value} 
                   checked={isChecked}
                   onCheckedChange={(details) => {
-                    console.log('[FiltersPanel] Company size changed:', details)
                     handleCheckboxChange(
                       filters.companySize || [],
                       size.value,
-                      (newValues) => onChange({ ...filters, companySize: newValues })
+                      (newValues) => handleFilterChange({ ...filters, companySize: newValues })
                     )
                   }}
                   _hover={{ bg: 'gray.50' }}
@@ -162,11 +166,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   key={geo.value} 
                   checked={isChecked}
                   onCheckedChange={(details) => {
-                    console.log('[FiltersPanel] Geography changed:', details)
                     handleCheckboxChange(
                       filters.geography || [],
                       geo.value,
-                      (newValues) => onChange({ ...filters, geography: newValues })
+                      (newValues) => handleFilterChange({ ...filters, geography: newValues })
                     )
                   }}
                   _hover={{ bg: 'gray.50' }}
@@ -190,7 +193,7 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             </Text>
             <Slider.Root
               value={[filters.minRating || 0]}
-              onValueChange={(details) => onChange({ ...filters, minRating: details.value[0] })}
+              onValueChange={(details) => handleFilterChange({ ...filters, minRating: details.value[0] })}
               min={0}
               max={5}
               step={0.5}
@@ -214,8 +217,7 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
               <Switch.Root
                 checked={Boolean(filters.hasReviews)}
                 onCheckedChange={(details) => {
-                  console.log('[FiltersPanel] Has reviews changed:', details)
-                  onChange({ ...filters, hasReviews: details.checked })
+                  handleFilterChange({ ...filters, hasReviews: details.checked })
                 }}
               >
                 <Switch.HiddenInput />
@@ -229,8 +231,7 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
               <Switch.Root
                 checked={Boolean(filters.hasAcceptedDocs)}
                 onCheckedChange={(details) => {
-                  console.log('[FiltersPanel] Has accepted docs changed:', details)
-                  onChange({ ...filters, hasAcceptedDocs: details.checked })
+                  handleFilterChange({ ...filters, hasAcceptedDocs: details.checked })
                 }}
               >
                 <Switch.HiddenInput />
@@ -241,10 +242,6 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             </HStack>
           </VStack>
         </FilterSection>
-
-        <Button colorPalette="brand" w="full" size="lg">
-          {t('filters.apply')}
-        </Button>
       </VStack>
     </Box>
   )
