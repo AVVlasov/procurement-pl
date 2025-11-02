@@ -1,42 +1,41 @@
-import { Input, IconButton } from '@chakra-ui/react'
-import { forwardRef, useMemo, useState } from 'react'
+import React from 'react'
+import { Input, IconButton, Box } from '@chakra-ui/react'
+import { forwardRef, useState } from 'react'
 import { LuEye, LuEyeOff } from 'react-icons/lu'
 
-export interface PasswordInputProps extends Input.RootProps {
+export interface PasswordInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   placeholder?: string
 }
 
 export const PasswordInput = forwardRef<HTMLInputElement, PasswordInputProps>(
-  function PasswordInput(props, ref) {
-    const { placeholder, ...rest } = props
+  ({ placeholder, ...rest }, ref) => {
     const [open, setOpen] = useState(false)
 
-    const mergedRef = useMemo(() => {
-      return (node: HTMLInputElement | null) => {
-        if (typeof ref === 'function') ref(node)
-        else if (ref) ref.current = node
-      }
-    }, [ref])
-
     return (
-      <Input.Root {...rest}>
-        <Input.Field
-          ref={mergedRef}
+      <Box position="relative" display="inline-block" width="100%">
+        <Input
+          ref={ref}
           type={open ? 'text' : 'password'}
           placeholder={placeholder}
+          paddingRight="2.5rem"
+          {...rest}
         />
-        <Input.ElementEnd>
-          <IconButton
-            size="xs"
-            variant="ghost"
-            onClick={() => setOpen(!open)}
-            aria-label={open ? 'Hide password' : 'Show password'}
-          >
-            {open ? <LuEyeOff /> : <LuEye />}
-          </IconButton>
-        </Input.ElementEnd>
-      </Input.Root>
+        <IconButton
+          position="absolute"
+          right="0.5rem"
+          top="50%"
+          transform="translateY(-50%)"
+          size="xs"
+          variant="ghost"
+          onClick={() => setOpen(!open)}
+          aria-label={open ? 'Hide password' : 'Show password'}
+        >
+          {open ? <LuEyeOff /> : <LuEye />}
+        </IconButton>
+      </Box>
     )
-  },
+  }
 )
+
+PasswordInput.displayName = 'PasswordInput'
 
