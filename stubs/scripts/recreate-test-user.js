@@ -6,20 +6,41 @@ require('dotenv').config();
 const User = require(path.join(__dirname, '..', 'models', 'User'));
 const Company = require(path.join(__dirname, '..', 'models', 'Company'));
 
+const primaryUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/procurement_db';
+const fallbackUri =
+  process.env.MONGODB_AUTH_URI || 'mongodb://admin:password@localhost:27017/procurement_db?authSource=admin';
+
+const connectWithFallback = async () => {
+  try {
+    console.log('\n📡 Подключение к MongoDB (PRIMARY)...');
+    await mongoose.connect(primaryUri, { useNewUrlParser: true, useUnifiedTopology: true });
+    console.log('✅ Подключено к PRIMARY MongoDB');
+  } catch (primaryError) {
+    console.error('❌ Ошибка PRIMARY подключения:', primaryError.message);
+
+    const requiresFallback =
+      primaryError.code === 18 || primaryError.code === 13 || String(primaryError.message || '').includes('auth');
+
+    if (!requiresFallback) {
+      throw primaryError;
+    }
+
+    console.log('\n📡 Подключение к MongoDB (FALLBACK)...');
+    await mongoose.connect(fallbackUri, { useNewUrlParser: true, useUnifiedTopology: true });
+    console.log('✅ Подключено к FALLBACK MongoDB');
+  }
+};
+
 const recreateTestUser = async () => {
   try {
-    const mongoUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/procurement_db';
-    
-    console.log('\n🔄 Подключение к MongoDB...');
-    await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
-    console.log('✅ Подключено к MongoDB\n');
+    await connectWithFallback();
+
+    const presetCompanyId = new mongoose.Types.ObjectId('68fe2ccda3526c303ca06796');
+    const presetUserEmail = 'admin@test-company.ru';
 
     // Удалить старого тестового пользователя
     console.log('🗑️  Удаление старого тестового пользователя...');
-    const oldUser = await User.findOne({ email: 'admin@test-company.ru' });
+    const oldUser = await User.findOne({ email: presetUserEmail });
     if (oldUser) {
       // Удалить связанную компанию
       if (oldUser.companyId) {
@@ -35,6 +56,7 @@ const recreateTestUser = async () => {
     // Создать новую компанию с правильной кодировкой UTF-8
     console.log('\n🏢 Создание тестовой компании...');
     const company = await Company.create({
+      _id: presetCompanyId,
       fullName: 'ООО "Тестовая Компания"',
       inn: '1234567890',
       ogrn: '1234567890123',
@@ -53,7 +75,7 @@ const recreateTestUser = async () => {
     // Создать нового пользователя с правильной кодировкой UTF-8
     console.log('\n👤 Создание тестового пользователя...');
     const user = await User.create({
-      email: 'admin@test-company.ru',
+      email: presetUserEmail,
       password: 'SecurePass123!',
       firstName: 'Иван',
       lastName: 'Иванов',

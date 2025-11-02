@@ -4,7 +4,8 @@
     "placeholder": "Search companies, products, services...",
     "ai_mode": "AI Search",
     "simple_mode": "Simple Search",
-    "suggestions": "Suggestions"
+    "suggestions": "Suggestions",
+    "filters_hint": "Filters are active — you can search without a query"
   },
   "filters": {
     "title": "Filters",

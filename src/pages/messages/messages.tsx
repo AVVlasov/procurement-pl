@@ -65,9 +65,21 @@ export default function MessagesPage() {
   const { company } = useAuth()
   const myCompanyId = company?.id
 
-  const { data: apiThreads = [], refetch: refetchThreads } = useGetThreadsQuery()
+  const { data: apiThreads = [], refetch: refetchThreads } = useGetThreadsQuery(undefined, {
+    pollingInterval: 5000,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  })
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null)
-  const { data: messages = [] } = useGetThreadMessagesQuery(activeThreadId || '', { skip: !activeThreadId })
+  const {
+    data: messages = [],
+    refetch: refetchThreadMessages,
+  } = useGetThreadMessagesQuery(activeThreadId || '', {
+    skip: !activeThreadId,
+    pollingInterval: 4000,
+    refetchOnFocus: true,
+    refetchOnReconnect: true,
+  })
   const [sendMessage, { isLoading: isSending }] = useSendMessageMutation()
   const [messageText, setMessageText] = useState('')
   const { data: companyOptions } = useSearchCompaniesQuery({ limit: 100 })
@@ -81,6 +93,12 @@ export default function MessagesPage() {
     refetchThreads()
     setLocalThreads(getThreadsFromLocalStorage())
   }, [])
+
+  React.useEffect(() => {
+    if (activeThreadId) {
+      refetchThreadMessages()
+    }
+  }, [activeThreadId, refetchThreadMessages])
 
   // Объединяем API потоки и localStorage потоки
   const allThreads = useMemo(() => {
@@ -219,6 +237,7 @@ export default function MessagesPage() {
 
       setMessageText('')
       
+      refetchThreadMessages()
       // Явный рефреш threads после отправки сообщения
       setTimeout(() => {
         refetchThreads()
@@ -227,6 +246,49 @@ export default function MessagesPage() {
       console.error('Error sending message:', error)
     }
   }
+
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null)
+  const stickToBottomRef = React.useRef(true)
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight)
+      stickToBottomRef.current = distanceFromBottom < 120
+    }
+
+    container.addEventListener('scroll', handleScroll)
+    handleScroll()
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll)
+    }
+  }, [activeThreadId])
+
+  React.useEffect(() => {
+    if (!stickToBottomRef.current) {
+      return
+    }
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: 'smooth',
+    })
+  }, [messages])
+
+  React.useEffect(() => {
+    stickToBottomRef.current = true
+    const container = scrollContainerRef.current
+    if (!container) return
+    requestAnimationFrame(() => {
+      container.scrollTop = container.scrollHeight
+    })
+  }, [activeThreadId])
 
   return (
     <MainLayout>
@@ -373,13 +435,13 @@ export default function MessagesPage() {
                 </HStack>
 
                 <VStack
+                  ref={scrollContainerRef}
                   flex={1}
                   gap={3}
                   p={4}
                   overflowY="auto"
                   align="stretch"
                   bg="gray.50"
-                  justifyContent="flex-end"
                 >
                   {messages.map((m: any) => (
                     <Box

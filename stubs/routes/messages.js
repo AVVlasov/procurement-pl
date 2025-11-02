@@ -17,7 +17,7 @@ const log = (message, data = '') => {
 // GET /messages/threads - получить все потоки для компании
 router.get('/threads', verifyToken, async (req, res) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
     const { ObjectId } = require('mongoose').Types;
 
     log('[Messages] Fetching threads for companyId:', companyId, 'type:', typeof companyId);
@@ -91,7 +91,7 @@ router.get('/threads', verifyToken, async (req, res) => {
 router.get('/:threadId', verifyToken, async (req, res) => {
   try {
     const { threadId } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     // Получить все сообщения потока
     const threadMessages = await Message.find({ threadId })
@@ -128,7 +128,7 @@ router.post('/:threadId', verifyToken, async (req, res) => {
     const threadParts = threadId.replace('thread-', '').split('-');
     let recipientCompanyId = null;
 
-    const currentSender = senderCompanyId || req.user.companyId;
+    const currentSender = senderCompanyId || req.companyId;
     const currentSenderString = currentSender.toString ? currentSender.toString() : currentSender;
 
     if (threadParts.length >= 2) {

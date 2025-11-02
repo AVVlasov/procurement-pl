@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
+const fs = require('fs');
 const connectDB = require(path.join(__dirname, '..', 'config', 'db'));
 
 // Загрузить переменные окружения
@@ -62,6 +63,13 @@ app.use((req, res, next) => {
 // Задержка для имитации сети (опционально)
 const delay = (ms = 300) => (req, res, next) => setTimeout(next, ms);
 app.use(delay());
+
+// Статика для загруженных файлов
+const uploadsRoot = path.join(__dirname, '..', '..', 'remote-assets', 'uploads');
+if (!fs.existsSync(uploadsRoot)) {
+  fs.mkdirSync(uploadsRoot, { recursive: true });
+}
+app.use('/uploads', express.static(uploadsRoot));
 
 // Health check endpoint
 app.get('/health', (req, res) => {

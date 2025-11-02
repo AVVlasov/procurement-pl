@@ -14,6 +14,7 @@ import {
   Dialog,
   Field,
   Flex,
+  Spinner,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiPlus, FiTrash2, FiDownload, FiFileText, FiEdit2, FiUpload, FiCheck, FiX } from 'react-icons/fi'
@@ -78,8 +79,8 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
   const [createProduct, { isLoading: isCreating }] = useCreateBuyProductMutation()
   const [updateProduct, { isLoading: isUpdating }] = useUpdateBuyProductMutation()
   const [deleteProduct, { isLoading: isDeleting }] = useDeleteBuyProductMutation()
-  const [addFile] = useAddBuyProductFileMutation()
-  const [deleteFile] = useDeleteBuyProductFileMutation()
+  const [addFile, { isLoading: isUploadingFile }] = useAddBuyProductFileMutation()
+  const [removeFile, { isLoading: isRemovingFile }] = useDeleteBuyProductFileMutation()
   const [acceptProduct] = useAcceptBuyProductMutation()
 
   const [isFormOpen, setIsFormOpen] = useState(false)
@@ -157,12 +158,11 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
       // Upload files if any
       if (selectedFiles.length > 0 && productId) {
         for (const file of selectedFiles) {
-          const formDataFile = new FormData()
-          formDataFile.append('file', file)
           try {
             await addFile({ id: productId, file }).unwrap()
           } catch (err) {
             console.error('Error uploading file:', err)
+            toast.error(t('common:messages.file_upload_failed'))
           }
         }
       }
@@ -171,9 +171,22 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
       setFormData({ name: '', description: '', quantity: '', unit: 'шт' })
       setSelectedFiles([])
       setErrors({})
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
       await refetch()
     } catch (error) {
       toast.error(t('common:errors.server_error') || 'Ошибка при сохранении')
+    }
+  }
+
+  const handleRemoveFile = async (productId: string, fileId: string) => {
+    try {
+      await removeFile({ id: productId, fileId }).unwrap()
+      toast.success(t('common:messages.file_deleted'))
+      await refetch()
+    } catch (error) {
+      toast.error(t('common:messages.file_delete_failed'))
     }
   }
 
@@ -230,7 +243,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                 <Table.ColumnHeader>{t('common:labels.name') || 'Название'}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.description') || 'Описание'}</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.quantity') || 'Количество'}</Table.ColumnHeader>
-                <Table.ColumnHeader>Файлы</Table.ColumnHeader>
+                <Table.ColumnHeader>{t('buy_products.files') || 'Файлы'}</Table.ColumnHeader>
                 <Table.ColumnHeader>Акцепты</Table.ColumnHeader>
                 <Table.ColumnHeader>{t('common:labels.actions') || 'Действия'}</Table.ColumnHeader>
               </Table.Row>
@@ -247,9 +260,43 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                     {product.quantity} {product.unit}
                   </Table.Cell>
                   <Table.Cell>
-                    <Badge colorPalette="blue">
-                      {product.files?.length || 0}
-                    </Badge>
+                    {product.files && product.files.length > 0 ? (
+                      <VStack align="start" gap={2} maxW="240px">
+                        {product.files.map((file: any) => (
+                          <HStack key={file.id} gap={2} align="center">
+                            <Button
+                              as="a"
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              size="sm"
+                              variant="link"
+                              colorPalette="brand"
+                              gap={1}
+                            >
+                              <FiDownload />
+                              <Text>{file.name}</Text>
+                            </Button>
+                            {isEditingOwn && (
+                              <IconButton
+                                size="xs"
+                                variant="ghost"
+                                colorPalette="red"
+                                aria-label={t('common:buttons.delete') || 'Удалить'}
+                                onClick={() => handleRemoveFile(product._id, file.id)}
+                                loading={isRemovingFile}
+                              >
+                                <FiTrash2 />
+                              </IconButton>
+                            )}
+                          </HStack>
+                        ))}
+                      </VStack>
+                    ) : (
+                      <Badge colorPalette="gray">
+                        {t('buy_products.files_empty') || 'Нет файлов'}
+                      </Badge>
+                    )}
                   </Table.Cell>
                   <Table.Cell>
                     <Button
@@ -432,12 +479,19 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
 
                 {isEditingOwn && (
                   <Field.Root>
-                    <Field.Label>Загрузить файлы</Field.Label>
+                    <Field.Label>
+                      <HStack justify="space-between">
+                        <Text>{t('buy_products.files') || 'Файлы'}</Text>
+                        <Text fontSize="xs" color="gray.500">
+                          {t('buy_products.upload_hint') || 'PDF, DOC, DOCX, XLS, XLSX, CSV до 15 МБ'}
+                        </Text>
+                      </HStack>
+                    </Field.Label>
                     <Input
                       ref={fileInputRef}
                       type="file"
                       multiple
-                      accept=".doc,.docx,.xls,.xlsx,.pdf"
+                      accept=".doc,.docx,.xls,.xlsx,.pdf,.csv"
                       onChange={handleFileSelect}
                       display="none"
                     />
@@ -446,9 +500,16 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                       variant="outline"
                       width="full"
                       onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploadingFile}
                     >
-                      <FiUpload />
-                      Выбрать файлы (DOC, XLS, PDF)
+                      <HStack gap={2} justify="center">
+                        {isUploadingFile ? <Spinner size="sm" /> : <FiUpload />}
+                        <Text>
+                          {isUploadingFile
+                            ? t('buy_products.uploading') || 'Загрузка...'
+                            : t('buy_products.select_files') || 'Выбрать файлы (DOC, XLS, PDF)'}
+                        </Text>
+                      </HStack>
                     </Button>
                     {selectedFiles.length > 0 && (
                       <VStack gap={2} mt={3} align="start">

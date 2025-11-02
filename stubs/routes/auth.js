@@ -1,8 +1,101 @@
 const express = require('express');
 const router = express.Router();
-const { generateToken } = require('../middleware/auth');
+const { generateToken, verifyToken } = require('../middleware/auth');
 const User = require('../models/User');
 const Company = require('../models/Company');
+const Request = require('../models/Request');
+const BuyProduct = require('../models/BuyProduct');
+const Message = require('../models/Message');
+const Review = require('../models/Review');
+const mongoose = require('mongoose');
+const { Types } = mongoose;
+const connectDB = require('../config/db');
+
+const PRESET_COMPANY_ID = new Types.ObjectId('68fe2ccda3526c303ca06796');
+const PRESET_USER_EMAIL = 'admin@test-company.ru';
+
+const changePasswordFlow = async (userId, currentPassword, newPassword) => {
+  if (!currentPassword || !newPassword) {
+    return { status: 400, body: { error: 'Current password and new password are required' } };
+  }
+
+  if (typeof newPassword !== 'string' || newPassword.trim().length < 8) {
+    return { status: 400, body: { error: 'New password must be at least 8 characters long' } };
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return { status: 404, body: { error: 'User not found' } };
+  }
+
+  const isMatch = await user.comparePassword(currentPassword);
+
+  if (!isMatch) {
+    return { status: 400, body: { error: 'Current password is incorrect' } };
+  }
+
+  user.password = newPassword;
+  user.updatedAt = new Date();
+  await user.save();
+
+  return { status: 200, body: { message: 'Password updated successfully' } };
+};
+
+const deleteAccountFlow = async (userId, password) => {
+  if (!password) {
+    return { status: 400, body: { error: 'Password is required to delete account' } };
+  }
+
+  const user = await User.findById(userId);
+
+  if (!user) {
+    return { status: 404, body: { error: 'User not found' } };
+  }
+
+  const validPassword = await user.comparePassword(password);
+
+  if (!validPassword) {
+    return { status: 400, body: { error: 'Password is incorrect' } };
+  }
+
+  const companyId = user.companyId ? user.companyId.toString() : null;
+  const companyObjectId = companyId && Types.ObjectId.isValid(companyId) ? new Types.ObjectId(companyId) : null;
+
+  const cleanupTasks = [];
+
+  if (companyId) {
+    cleanupTasks.push(Request.deleteMany({
+      $or: [{ senderCompanyId: companyId }, { recipientCompanyId: companyId }],
+    }));
+
+    cleanupTasks.push(BuyProduct.deleteMany({ companyId }));
+
+    if (companyObjectId) {
+      cleanupTasks.push(Message.deleteMany({
+        $or: [
+          { senderCompanyId: companyObjectId },
+          { recipientCompanyId: companyObjectId },
+        ],
+      }));
+
+      cleanupTasks.push(Review.deleteMany({
+        $or: [
+          { companyId: companyObjectId },
+          { authorCompanyId: companyObjectId },
+        ],
+      }));
+    }
+
+    cleanupTasks.push(Company.findByIdAndDelete(companyId));
+  }
+
+  cleanupTasks.push(User.findByIdAndDelete(user._id));
+
+  await Promise.all(cleanupTasks);
+
+  return { status: 200, body: { message: 'Account deleted successfully' } };
+};
 
 // Функция для логирования с проверкой DEV переменной
 const log = (message, data = '') => {
@@ -15,16 +108,65 @@ const log = (message, data = '') => {
   }
 };
 
-// In-memory storage для логирования
-let users = [];
+const waitForDatabaseConnection = async () => {
+  const isAuthFailure = (error) => {
+    if (!error) return false;
+    if (error.code === 13 || error.code === 18) return true;
+    return /auth/i.test(String(error.message || ''));
+  };
+
+  const verifyAuth = async () => {
+    try {
+      await mongoose.connection.db.admin().command({ listDatabases: 1 });
+      return true;
+    } catch (error) {
+      if (isAuthFailure(error)) {
+        return false;
+      }
+      throw error;
+    }
+  };
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (mongoose.connection.readyState === 1) {
+      const authed = await verifyAuth();
+      if (authed) {
+        return;
+      }
+      await mongoose.connection.close().catch(() => {});
+    }
+
+    try {
+      const connection = await connectDB();
+      if (!connection) {
+        break;
+      }
+
+      const authed = await verifyAuth();
+      if (authed) {
+        return;
+      }
+
+      await mongoose.connection.close().catch(() => {});
+    } catch (error) {
+      if (!isAuthFailure(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error('Unable to authenticate with MongoDB');
+};
 
 // Инициализация тестового пользователя
 const initializeTestUser = async () => {
   try {
-    const existingUser = await User.findOne({ email: 'admin@test-company.ru' });
-    if (!existingUser) {
-      // Создать компанию
-      const company = await Company.create({
+    await waitForDatabaseConnection();
+
+    let company = await Company.findById(PRESET_COMPANY_ID);
+    if (!company) {
+      company = await Company.create({
+        _id: PRESET_COMPANY_ID,
         fullName: 'ООО "Тестовая Компания"',
         shortName: 'ООО "Тест"',
         inn: '7707083893',
@@ -39,108 +181,51 @@ const initializeTestUser = async () => {
         description: 'Ведущая компания в области производства',
         slogan: 'Качество и инновация'
       });
+      log('✅ Test company initialized');
+    } else {
+      await Company.updateOne(
+        { _id: PRESET_COMPANY_ID },
+        {
+          $set: {
+            fullName: 'ООО "Тестовая Компания"',
+            shortName: 'ООО "Тест"',
+            industry: 'Производство',
+            companySize: '50-100',
+            partnerGeography: ['moscow', 'russia_all'],
+            website: 'https://test-company.ru',
+          },
+        }
+      );
+    }
 
-      // Создать пользователя
-      const user = await User.create({
-        email: 'admin@test-company.ru',
+    let existingUser = await User.findOne({ email: PRESET_USER_EMAIL });
+    if (!existingUser) {
+      existingUser = await User.create({
+        email: PRESET_USER_EMAIL,
         password: 'SecurePass123!',
         firstName: 'Иван',
         lastName: 'Петров',
         position: 'Генеральный директор',
-        companyId: company._id
+        companyId: PRESET_COMPANY_ID
       });
-
       log('✅ Test user initialized');
-    }
-
-    // Инициализация других тестовых компаний
-    const mockCompanies = [
-      {
-        fullName: 'ООО "СтройКомплект"',
-        shortName: 'ООО "СтройКомплект"',
-        inn: '7707083894',
-        ogrn: '1027700132196',
-        legalForm: 'ООО',
-        industry: 'Строительство',
-        companySize: '51-250',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://stroykomplekt.ru',
-        verified: true,
-        rating: 4.8,
-        description: 'Компания строит будущее вместе',
-        slogan: 'Строим будущее вместе'
-      },
-      {
-        fullName: 'АО "Московский Строй"',
-        shortName: 'АО "Московский Строй"',
-        inn: '7707083895',
-        ogrn: '1027700132197',
-        legalForm: 'АО',
-        industry: 'Строительство',
-        companySize: '500+',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://moscow-stroy.ru',
-        verified: true,
-        rating: 4.9,
-        description: 'Качество и надежность с 1995 года',
-        slogan: 'Качество и надежность'
-      },
-      {
-        fullName: 'ООО "ТеxПроект"',
-        shortName: 'ООО "ТеxПроект"',
-        inn: '7707083896',
-        ogrn: '1027700132198',
-        legalForm: 'ООО',
-        industry: 'IT',
-        companySize: '11-50',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://techproject.ru',
-        verified: true,
-        rating: 4.6,
-        description: 'Решения в области информационных технологий',
-        slogan: 'Технологии для бизнеса'
-      },
-      {
-        fullName: 'ООО "ТоргПартнер"',
-        shortName: 'ООО "ТоргПартнер"',
-        inn: '7707083897',
-        ogrn: '1027700132199',
-        legalForm: 'ООО',
-        industry: 'Оптовая торговля',
-        companySize: '51-250',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://torgpartner.ru',
-        verified: true,
-        rating: 4.3,
-        description: 'Оптовые поставки и логистика',
-        slogan: 'Надежный партнер в торговле'
-      },
-      {
-        fullName: 'ООО "ЭнергоПлюс"',
-        shortName: 'ООО "ЭнергоПлюс"',
-        inn: '7707083898',
-        ogrn: '1027700132200',
-        legalForm: 'ООО',
-        industry: 'Энергетика',
-        companySize: '251-500',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://energoplus.ru',
-        verified: true,
-        rating: 4.7,
-        description: 'Энергетические решения и консалтинг',
-        slogan: 'Энергия для развития'
-      }
-    ];
-
-    for (const mockCompanyData of mockCompanies) {
-      const existingCompany = await Company.findOne({ inn: mockCompanyData.inn });
-      if (!existingCompany) {
-        await Company.create(mockCompanyData);
-        log(`✅ Mock company created: ${mockCompanyData.fullName}`);
-      }
+    } else if (!existingUser.companyId || existingUser.companyId.toString() !== PRESET_COMPANY_ID.toString()) {
+      existingUser.companyId = PRESET_COMPANY_ID;
+      existingUser.updatedAt = new Date();
+      await existingUser.save();
+      log('ℹ️ Test user company reference was fixed');
     }
   } catch (error) {
     console.error('Error initializing test data:', error.message);
+    if (error?.code === 13 || /auth/i.test(error?.message || '')) {
+      try {
+        await connectDB();
+      } catch (connectError) {
+        if (process.env.DEV === 'true') {
+          console.error('Failed to re-connect after auth error:', connectError.message);
+        }
+      }
+    }
   }
 };
 
@@ -149,6 +234,8 @@ initializeTestUser();
 // Регистрация
 router.post('/register', async (req, res) => {
   try {
+    await waitForDatabaseConnection();
+
     const { email, password, firstName, lastName, position, phone, fullName, inn, ogrn, legalForm, industry, companySize, website } = req.body;
 
     // Проверка обязательных полей
@@ -235,6 +322,14 @@ router.post('/register', async (req, res) => {
 // Вход
 router.post('/login', async (req, res) => {
   try {
+    if (process.env.DEV === 'true') {
+      console.log('[Auth] /login called');
+    }
+    await waitForDatabaseConnection();
+    if (process.env.DEV === 'true') {
+      console.log('[Auth] DB ready, running login query');
+    }
+
     const { email, password } = req.body;
 
     if (!email || !password) {
@@ -251,102 +346,52 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    // Инициализация других тестовых компаний
-    const mockCompanies = [
-      {
-        fullName: 'ООО "СтройКомплект"',
-        shortName: 'ООО "СтройКомплект"',
-        inn: '7707083894',
-        ogrn: '1027700132196',
-        legalForm: 'ООО',
-        industry: 'Строительство',
-        companySize: '51-250',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://stroykomplekt.ru',
-        verified: true,
-        rating: 4.8,
-        description: 'Компания строит будущее вместе',
-        slogan: 'Строим будущее вместе'
-      },
-      {
-        fullName: 'АО "Московский Строй"',
-        shortName: 'АО "Московский Строй"',
-        inn: '7707083895',
-        ogrn: '1027700132197',
-        legalForm: 'АО',
-        industry: 'Строительство',
-        companySize: '500+',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://moscow-stroy.ru',
-        verified: true,
-        rating: 4.9,
-        description: 'Качество и надежность с 1995 года',
-        slogan: 'Качество и надежность'
-      },
-      {
-        fullName: 'ООО "ТеxПроект"',
-        shortName: 'ООО "ТеxПроект"',
-        inn: '7707083896',
-        ogrn: '1027700132198',
-        legalForm: 'ООО',
-        industry: 'IT',
-        companySize: '11-50',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://techproject.ru',
-        verified: true,
-        rating: 4.6,
-        description: 'Решения в области информационных технологий',
-        slogan: 'Технологии для бизнеса'
-      },
-      {
-        fullName: 'ООО "ТоргПартнер"',
-        shortName: 'ООО "ТоргПартнер"',
-        inn: '7707083897',
-        ogrn: '1027700132199',
-        legalForm: 'ООО',
-        industry: 'Оптовая торговля',
-        companySize: '51-250',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://torgpartner.ru',
-        verified: true,
-        rating: 4.3,
-        description: 'Оптовые поставки и логистика',
-        slogan: 'Надежный партнер в торговле'
-      },
-      {
-        fullName: 'ООО "ЭнергоПлюс"',
-        shortName: 'ООО "ЭнергоПлюс"',
-        inn: '7707083898',
-        ogrn: '1027700132200',
-        legalForm: 'ООО',
-        industry: 'Энергетика',
-        companySize: '251-500',
-        partnerGeography: ['moscow', 'russia_all'],
-        website: 'https://energoplus.ru',
-        verified: true,
-        rating: 4.7,
-        description: 'Энергетические решения и консалтинг',
-        slogan: 'Энергия для развития'
-      }
-    ];
-
-    for (const mockCompanyData of mockCompanies) {
-      try {
-        const existingCompany = await Company.findOne({ inn: mockCompanyData.inn });
-        if (!existingCompany) {
-          await Company.create(mockCompanyData);
-        }
-      } catch (err) {
-        // Ignore errors for mock company creation
-      }
+    if (
+      user.email === PRESET_USER_EMAIL &&
+      (!user.companyId || user.companyId.toString() !== PRESET_COMPANY_ID.toString())
+    ) {
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { companyId: PRESET_COMPANY_ID, updatedAt: new Date() } }
+      );
+      user.companyId = PRESET_COMPANY_ID;
     }
 
     // Получить компанию до использования в generateToken
     let companyData = null;
     try {
-      companyData = await Company.findById(user.companyId);
+      companyData = user.companyId ? await Company.findById(user.companyId) : null;
     } catch (err) {
       console.error('Failed to fetch company:', err.message);
+    }
+
+    if (user.email === PRESET_USER_EMAIL) {
+      try {
+        companyData = await Company.findByIdAndUpdate(
+          PRESET_COMPANY_ID,
+          {
+            $set: {
+              fullName: 'ООО "Тестовая Компания"',
+              shortName: 'ООО "Тест"',
+              inn: '7707083893',
+              ogrn: '1027700132195',
+              legalForm: 'ООО',
+              industry: 'Производство',
+              companySize: '50-100',
+              partnerGeography: ['moscow', 'russia_all'],
+              website: 'https://test-company.ru',
+              verified: true,
+              rating: 4.5,
+              description: 'Ведущая компания в области производства',
+              slogan: 'Качество и инновация',
+              updatedAt: new Date(),
+            },
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+      } catch (err) {
+        console.error('Failed to ensure preset company:', err.message);
+      }
     }
 
     const token = generateToken(user._id.toString(), user.companyId.toString(), user.firstName, user.lastName, companyData?.fullName || 'Company');
@@ -373,14 +418,56 @@ router.post('/login', async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
+    res.status(500).json({ error: `LOGIN_ERROR: ${error.message}` });
+  }
+});
+
+// Смена пароля
+router.post('/change-password', verifyToken, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body || {};
+    const result = await changePasswordFlow(req.userId, currentPassword, newPassword);
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error('Change password error:', error);
     res.status(500).json({ error: error.message });
   }
 });
 
-// Обновить профиль
-router.patch('/profile', (req, res) => {
-  // требует авторизации, добавить middleware
-  res.json({ message: 'Update profile endpoint' });
+// Удаление аккаунта
+router.delete('/account', verifyToken, async (req, res) => {
+  try {
+    const { password } = req.body || {};
+    const result = await deleteAccountFlow(req.userId, password);
+    res.status(result.status).json(result.body);
+  } catch (error) {
+    console.error('Delete account error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Обновить профиль / универсальные действия
+router.patch('/profile', verifyToken, async (req, res) => {
+  try {
+    const rawAction = req.body?.action || req.query?.action || req.body?.type;
+    const payload = req.body?.payload || req.body || {};
+    const action = typeof rawAction === 'string' ? rawAction : '';
+
+    if (action === 'changePassword') {
+      const result = await changePasswordFlow(req.userId, payload.currentPassword, payload.newPassword);
+      return res.status(result.status).json(result.body);
+    }
+
+    if (action === 'deleteAccount') {
+      const result = await deleteAccountFlow(req.userId, payload.password);
+      return res.status(result.status).json(result.body);
+    }
+
+    res.json({ message: 'Profile endpoint' });
+  } catch (error) {
+    console.error('Profile update error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;

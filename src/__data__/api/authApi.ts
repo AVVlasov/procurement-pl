@@ -1,5 +1,6 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 import { URLs } from '../urls'
+import type { RootState } from '../store'
 
 export interface LoginRequest {
   email: string;
@@ -60,9 +61,23 @@ export interface AuthResponse {
   };
 }
 
+const baseQuery = fetchBaseQuery({
+  baseUrl: `${URLs.apiUrl}/auth`,
+  prepareHeaders: (headers, { getState }) => {
+    const state = getState() as RootState | undefined
+    const token = state?.auth?.accessToken
+
+    if (token) {
+      headers.set('authorization', `Bearer ${token}`)
+    }
+
+    return headers
+  },
+})
+
 export const authApi = createApi({
   reducerPath: 'authApi',
-  baseQuery: fetchBaseQuery({ baseUrl: `${URLs.apiUrl}/auth` }),
+  baseQuery,
   tagTypes: ['Auth'],
   endpoints: (builder) => ({
     login: builder.mutation<AuthResponse, LoginRequest>({
@@ -121,6 +136,30 @@ export const authApi = createApi({
         body: { refreshToken },
       }),
     }),
+
+    changePassword: builder.mutation<{ message: string }, { currentPassword: string; newPassword: string }>({
+      query: ({ currentPassword, newPassword }) => ({
+        url: '/profile',
+        method: 'PATCH',
+        params: { action: 'changePassword' },
+        body: {
+          action: 'changePassword',
+          payload: { currentPassword, newPassword },
+        },
+      }),
+    }),
+    
+    deleteAccount: builder.mutation<{ message: string }, { password: string }>({
+      query: ({ password }) => ({
+        url: '/profile',
+        method: 'PATCH',
+        params: { action: 'deleteAccount' },
+        body: {
+          action: 'deleteAccount',
+          payload: { password },
+        },
+      }),
+    }),
   }),
 })
 
@@ -132,5 +171,7 @@ export const {
   useRequestPasswordResetMutation,
   useResetPasswordMutation,
   useRefreshTokenMutation,
+  useChangePasswordMutation,
+  useDeleteAccountMutation,
 } = authApi
 

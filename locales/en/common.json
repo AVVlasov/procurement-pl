@@ -81,7 +81,11 @@
     "send": "Send",
     "select_company": "Select a company to start a conversation",
     "find_company": "Find a company",
-    "history": "Conversation history"
+    "history": "Conversation history",
+    "file_uploaded": "File uploaded",
+    "file_upload_failed": "Failed to upload file",
+    "file_deleted": "File deleted",
+    "file_delete_failed": "Failed to delete file"
   },
   "buy": {
     "title": "I Buy",
@@ -92,7 +96,7 @@
   "requests": {
     "title": "Bulk Requests",
     "recipients": "Recipients",
-    "attachments": "Attachments",
+    "attachments": "Add files",
     "send": "Send",
     "result": "Result",
     "buyDocsTitle": "I Buy — Documents",
@@ -111,7 +115,6 @@
     "bulkRequestTitle": "Bulk Request Distribution (up to 20 recipients)",
     "bulkTextLabel": "Request Text",
     "recipientsLabel": "Recipients",
-    "recipientsCount": "Selected",
     "sendBulkButton": "Send",
     "finalReportTitle": "Final Report",
     "exportHtmlButton": "Export HTML",
@@ -134,13 +137,160 @@
     "productsEmpty": "Products will be displayed here",
     "select_file": "Please select a file",
     "sentTab": "Sent Requests",
-    "receivedTab": "Received Requests"
+    "receivedTab": "Received Requests",
+    "responsesTab": "Responses",
+    "newRequest": "Send New Request",
+    "product": "Select Product",
+    "productPlaceholder": "Choose a product",
+    "subject": "Purchase Subject",
+    "subjectPlaceholder": "Enter purchase subject",
+    "subjectRequired": "Specify the purchase subject",
+    "subjectFallback": "No subject",
+    "text": "Request Text",
+    "textPlaceholder": "Enter request text",
+    "textRequired": "Enter the request text",
+    "removeFile": "Remove file",
+    "recipientsCount": "Selected: {{count}}",
+    "recipientsSearch": "Search companies",
+    "recipientsEmpty": "Select recipients",
+    "recipientsLimit": "Maximum 20 recipients",
+    "aiButton": "Suggest companies (AI)",
+    "aiQueryRequired": "Provide the subject or text first",
+    "aiEmpty": "No matching companies found",
+    "aiSuccess": "Company recommendations added",
+    "aiError": "Failed to fetch recommendations",
+    "noRecipients": "No companies found. Adjust filters or query.",
+    "noFiles": "No files attached",
+    "sendButton": "Send Request",
+    "sentSuccess": "Request sent successfully",
+    "sendError": "Failed to send request",
+    "sentHistory": "Sent Requests History",
+    "sentEmpty": "No sent requests",
+    "receivedTitle": "Received Requests",
+    "receivedEmpty": "No received requests",
+    "deleted": "Request deleted",
+    "deleteError": "Failed to delete",
+    "responsesTitle": "Responses to Sent Requests",
+    "responsesEmpty": "No responses",
+    "responseTextRequired": "Enter a response",
+    "responseSent": "Response sent",
+    "responseError": "Failed to send response",
+    "responseFiles": "Response attachments",
+    "responseExistingFiles": "Files already received:",
+    "responseSubmit": "Send response",
+    "tableCompany": "Company",
+    "tableText": "Text",
+    "tableFiles": "Files",
+    "tableStatus": "Status",
+    "tableResponse": "Response",
+    "tableResponseFiles": "Response files",
+    "tableDate": "Date",
+    "tableResponseDate": "Response date",
+    "tableActions": "Actions",
+    "tableFromCompany": "From company",
+    "respond": "Respond",
+    "viewResponse": "View",
+    "respondDialogTitle": "Respond to request",
+    "statusLabel": "Status",
+    "responseText": "Response text",
+    "responsePlaceholder": "Enter response",
+    "exportXlsx": "Export to XLSX",
+    "statusPending": "Pending",
+    "statusAccepted": "Accepted",
+    "statusRejected": "Rejected",
+    "acceptancesLoading": "Loading accepted companies...",
+    "recipientAcceptance": "Accepted",
+    "recipientAi": "AI",
+    "recipientAll": "Catalog"
   },
   "report": {
     "title": "Final Report",
     "preview": "Preview",
     "exportHtml": "Export to HTML",
     "exportXlsx": "Export to XLSX"
+  },
+  "settings": {
+    "messages": {
+      "saved": "Settings have been saved",
+      "languageChanged": "Language updated",
+      "noCompany": "Cannot detect company. Please try again"
+    },
+    "actions": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "changePassword": "Change password",
+      "deleteAccount": "Delete account"
+    },
+    "experience": {
+      "title": "Project experience",
+      "add": "Add record",
+      "description": "Add verified use cases for {{company}}",
+      "defaultCompanyTitle": "your company",
+      "success": "Experience record added",
+      "error": "Failed to save experience",
+      "modal": {
+        "title": "New experience record",
+        "confirmed": "Verified by partner",
+        "customer": "Customer",
+        "subject": "Procurement subject",
+        "volume": "Deal volume",
+        "contact": "Contacts",
+        "comment": "Comment"
+      }
+    },
+    "profile": {
+      "title": "Profile",
+      "name": "User name",
+      "email": "Email",
+      "company": "Company",
+      "unknown": "Not specified"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "pushTitle": "Push notifications",
+      "pushDescription": "Receive browser notifications",
+      "emailTitle": "Email notifications",
+      "emailDescription": "Receive notifications via email"
+    },
+    "language": {
+      "title": "Language and region",
+      "interface": "Interface language",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "security": {
+      "title": "Security"
+    },
+    "password": {
+      "title": "Update password",
+      "current": "Current password",
+      "currentPlaceholder": "Enter current password",
+      "new": "New password",
+      "newPlaceholder": "Enter new password",
+      "confirm": "Repeat new password",
+      "confirmPlaceholder": "Repeat new password",
+      "submit": "Update password",
+      "success": "Password updated",
+      "error": "Failed to update password",
+      "validation": {
+        "required": "Fill in all fields",
+        "mismatch": "Passwords do not match"
+      }
+    },
+    "delete": {
+      "title": "Delete account",
+      "description": "To delete the account, confirm the action and enter your password. This action cannot be undone. Type {{email}} to confirm",
+      "password": "Password",
+      "passwordPlaceholder": "Enter password",
+      "confirmation": "Confirmation (type {{email}})",
+      "submit": "Delete account",
+      "success": "Account deleted",
+      "error": "Failed to delete account",
+      "validation": {
+        "required": "Fill in all fields",
+        "confirmation": "Enter {{email}} to confirm"
+      }
+    }
   }
 }
 

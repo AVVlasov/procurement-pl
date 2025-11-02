@@ -30,6 +30,7 @@ const buyProductSchema = new mongoose.Schema({
     url: String,
     type: String,
     size: Number,
+    storagePath: String,
     uploadedAt: {
       type: Date,
       default: Date.now

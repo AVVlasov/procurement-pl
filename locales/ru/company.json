@@ -97,7 +97,12 @@
     "description_placeholder": "Описание товара (мин. 10 символов)",
     "quantity": "Количество",
     "quantity_placeholder": "Количество",
-    "unit": "Единица измерения"
+    "unit": "Единица измерения",
+    "files": "Файлы",
+    "files_empty": "Файлы не приложены",
+    "upload_hint": "Допустимые форматы: PDF, DOC, DOCX, XLS, XLSX, CSV (до 15 МБ)",
+    "select_files": "Выбрать файлы (DOC, XLS, PDF)",
+    "uploading": "Загрузка..."
   }
 }
 

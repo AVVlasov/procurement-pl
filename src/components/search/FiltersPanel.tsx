@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   Box,
   VStack,
@@ -34,6 +34,17 @@ export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPan
   const geoDisclosure = useDisclosure({ defaultIsOpen: false })
   const ratingDisclosure = useDisclosure({ defaultIsOpen: false })
   const acceptsDisclosure = useDisclosure({ defaultIsOpen: false })
+
+  const hasSelectedFilters = useMemo(() => {
+    return Boolean(
+      (filters.industries && filters.industries.length > 0) ||
+      (filters.companySize && filters.companySize.length > 0) ||
+      (filters.geography && filters.geography.length > 0) ||
+      (filters.minRating && filters.minRating > 0) ||
+      filters.hasReviews ||
+      filters.hasAcceptedDocs
+    )
+  }, [filters])
 
   const FilterSection = ({
     title,
@@ -91,11 +102,30 @@ export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPan
       shadow="sm"
     >
       <VStack gap={4} align="stretch">
-        <HStack justify="space-between">
+        <HStack justify="space-between" align="center">
           <Heading size="md">{t('filters.title')}</Heading>
-          <Button size="sm" variant="ghost" colorPalette="brand" onClick={onReset}>
-            {t('filters.reset')}
-          </Button>
+          <HStack gap={2}>
+            <Button
+              size="sm"
+              variant="ghost"
+              colorPalette="brand"
+              onClick={onReset}
+              disabled={!hasSelectedFilters}
+            >
+              {t('filters.reset')}
+            </Button>
+            {onApply && (
+              <Button
+                size="sm"
+                colorPalette="brand"
+                variant="solid"
+                onClick={onApply}
+                disabled={!hasSelectedFilters}
+              >
+                {t('filters.apply')}
+              </Button>
+            )}
+          </HStack>
         </HStack>
 
         {/* Industry Filter */}
@@ -242,6 +272,18 @@ export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPan
             </HStack>
           </VStack>
         </FilterSection>
+        {onApply && (
+          <Button
+            mt={2}
+            size="md"
+            colorPalette="brand"
+            display={{ base: 'flex', md: 'none' }}
+            onClick={onApply}
+            disabled={!hasSelectedFilters}
+          >
+            {t('filters.apply')}
+          </Button>
+        )}
       </VStack>
     </Box>
   )

@@ -89,12 +89,17 @@ export const buyProductsApi = createApi({
       }),
       invalidatesTags: ['BuyProducts'],
     }),
-    addBuyProductFile: builder.mutation<BuyProduct, { id: string; fileName: string; fileUrl: string; fileType: string; fileSize: number }>({
-      query: ({ id, fileName, fileUrl, fileType, fileSize }) => ({
-        url: `/buy-products/${id}/files`,
-        method: 'POST',
-        body: { fileName, fileUrl, fileType, fileSize },
-      }),
+    addBuyProductFile: builder.mutation<BuyProduct, { id: string; file: File }>({
+      query: ({ id, file }) => {
+        const formData = new FormData()
+        formData.append('file', file)
+
+        return {
+          url: `/buy-products/${id}/files`,
+          method: 'POST',
+          body: formData,
+        }
+      },
       invalidatesTags: ['BuyProducts'],
     }),
     deleteBuyProductFile: builder.mutation<BuyProduct, { id: string; fileId: string }>({

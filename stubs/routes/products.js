@@ -28,7 +28,7 @@ const transformProduct = (doc) => {
 // GET /products - Получить список продуктов/услуг компании (текущего пользователя)
 router.get('/', verifyToken, async (req, res) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     log('[Products] GET Fetching products for companyId:', companyId);
     
@@ -48,7 +48,7 @@ router.get('/', verifyToken, async (req, res) => {
 router.post('/', verifyToken, async (req, res) => {
   // try {
     const { name, category, description, type, productUrl, price, unit, minOrder } = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     log('[Products] POST Creating product:', { name, category, type });
 
@@ -88,7 +88,7 @@ router.put('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const product = await Product.findById(id);
 
@@ -120,7 +120,7 @@ router.patch('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const product = await Product.findById(id);
 
@@ -150,7 +150,7 @@ router.patch('/:id', verifyToken, async (req, res) => {
 router.delete('/:id', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const product = await Product.findById(id);
 

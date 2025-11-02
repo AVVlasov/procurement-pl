@@ -81,7 +81,11 @@
     "send": "Отправить",
     "select_company": "Выберите компанию для начала диалога",
     "find_company": "Найти компанию",
-    "history": "История переписок"
+    "history": "История переписок",
+    "file_uploaded": "Файл загружен",
+    "file_upload_failed": "Не удалось загрузить файл",
+    "file_deleted": "Файл удалён",
+    "file_delete_failed": "Не удалось удалить файл"
   },
   "buy": {
     "title": "Я покупаю",
@@ -92,7 +96,7 @@
   "requests": {
     "title": "Массовые запросы",
     "recipients": "Получатели",
-    "attachments": "Вложения",
+    "attachments": "Добавить файлы",
     "send": "Отправить",
     "result": "Результат",
     "buyDocsTitle": "Я покупаю — документы",
@@ -111,7 +115,6 @@
     "bulkRequestTitle": "Массовая рассылка запросов (до 20 получателей)",
     "bulkTextLabel": "Текст запроса",
     "recipientsLabel": "Получатели",
-    "recipientsCount": "Выбрано",
     "sendBulkButton": "Отправить",
     "finalReportTitle": "Итоговый отчет",
     "exportHtmlButton": "Экспорт HTML",
@@ -134,13 +137,160 @@
     "productsEmpty": "Товары будут отображены здесь",
     "select_file": "Пожалуйста, выберите файл",
     "sentTab": "Запросы направленные",
-    "receivedTab": "Запросы полученные"
+    "receivedTab": "Запросы полученные",
+    "responsesTab": "Ответы на запросы",
+    "newRequest": "Отправить новый запрос",
+    "product": "Выберите товар",
+    "productPlaceholder": "Выберите товар из списка",
+    "subject": "Предмет закупки",
+    "subjectPlaceholder": "Введите предмет закупки",
+    "subjectRequired": "Укажите предмет закупки",
+    "subjectFallback": "Без предмета",
+    "text": "Текст запроса",
+    "textPlaceholder": "Введите текст запроса",
+    "textRequired": "Введите текст запроса",
+    "removeFile": "Удалить файл",
+    "recipientsCount": "Выбрано: {{count}}",
+    "recipientsSearch": "Поиск компаний",
+    "recipientsEmpty": "Выберите получателей",
+    "recipientsLimit": "Максимум 20 получателей",
+    "aiButton": "Подобрать компании (ИИ)",
+    "aiQueryRequired": "Сначала заполните предмет или текст запроса",
+    "aiEmpty": "Подходящих компаний не найдено",
+    "aiSuccess": "Добавлены рекомендации по компаниям",
+    "aiError": "Не удалось получить подсказки по компаниям",
+    "noRecipients": "Компании не найдены. Попробуйте изменить фильтры или запрос.",
+    "noFiles": "Файлы не приложены",
+    "sendButton": "Отправить запрос",
+    "sentSuccess": "Запрос отправлен успешно",
+    "sendError": "Ошибка при отправке запроса",
+    "sentHistory": "История отправленных запросов",
+    "sentEmpty": "Нет отправленных запросов",
+    "receivedTitle": "Полученные запросы",
+    "receivedEmpty": "Нет полученных запросов",
+    "deleted": "Запрос удалён",
+    "deleteError": "Ошибка при удалении",
+    "responsesTitle": "Ответы на отправленные запросы",
+    "responsesEmpty": "Нет ответов на запросы",
+    "responseTextRequired": "Введите текст ответа",
+    "responseSent": "Ответ отправлен",
+    "responseError": "Ошибка при отправке ответа",
+    "responseFiles": "Вложения к ответу",
+    "responseExistingFiles": "Полученные ранее файлы:",
+    "responseSubmit": "Отправить ответ",
+    "tableCompany": "Компания",
+    "tableText": "Текст",
+    "tableFiles": "Файлы",
+    "tableStatus": "Статус",
+    "tableResponse": "Ответ",
+    "tableResponseFiles": "Файлы ответа",
+    "tableDate": "Дата",
+    "tableResponseDate": "Дата ответа",
+    "tableActions": "Действия",
+    "tableFromCompany": "От компании",
+    "respond": "Ответить",
+    "viewResponse": "Посмотреть",
+    "respondDialogTitle": "Ответить на запрос",
+    "statusLabel": "Статус",
+    "responseText": "Текст ответа",
+    "responsePlaceholder": "Введите ответ на запрос",
+    "exportXlsx": "Экспортировать в XLSX",
+    "statusPending": "Ожидание",
+    "statusAccepted": "Принято",
+    "statusRejected": "Отклонено",
+    "acceptancesLoading": "Загружаем акцептовавшие компании...",
+    "recipientAcceptance": "Акцепт",
+    "recipientAi": "ИИ",
+    "recipientAll": "Каталог"
   },
   "report": {
     "title": "Итоговый отчет",
     "preview": "Предпросмотр",
     "exportHtml": "Экспорт в HTML",
     "exportXlsx": "Экспорт в XLSX"
+  },
+  "settings": {
+    "messages": {
+      "saved": "Настройки сохранены",
+      "languageChanged": "Язык интерфейса обновлён",
+      "noCompany": "Не удалось определить компанию. Повторите позже"
+    },
+    "actions": {
+      "save": "Сохранить",
+      "cancel": "Отмена",
+      "changePassword": "Изменить пароль",
+      "deleteAccount": "Удалить аккаунт"
+    },
+    "experience": {
+      "title": "Опыт работы",
+      "add": "Добавить запись",
+      "description": "Добавляйте подтверждённые кейсы компании {{company}}",
+      "defaultCompanyTitle": "вашей компании",
+      "success": "Запись опыта добавлена",
+      "error": "Не удалось сохранить запись",
+      "modal": {
+        "title": "Новая запись опыта",
+        "confirmed": "Подтверждено партнером",
+        "customer": "Заказчик",
+        "subject": "Предмет закупки",
+        "volume": "Объём",
+        "contact": "Контакты",
+        "comment": "Комментарий"
+      }
+    },
+    "profile": {
+      "title": "Профиль",
+      "name": "Имя пользователя",
+      "email": "Email",
+      "company": "Компания",
+      "unknown": "Не указано"
+    },
+    "notifications": {
+      "title": "Уведомления",
+      "pushTitle": "Push-уведомления",
+      "pushDescription": "Получать уведомления в браузере",
+      "emailTitle": "Email-уведомления",
+      "emailDescription": "Получать уведомления на почту"
+    },
+    "language": {
+      "title": "Язык и регион",
+      "interface": "Язык интерфейса",
+      "ru": "Русский",
+      "en": "English"
+    },
+    "security": {
+      "title": "Безопасность"
+    },
+    "password": {
+      "title": "Смена пароля",
+      "current": "Текущий пароль",
+      "currentPlaceholder": "Введите текущий пароль",
+      "new": "Новый пароль",
+      "newPlaceholder": "Введите новый пароль",
+      "confirm": "Повторите новый пароль",
+      "confirmPlaceholder": "Повторите новый пароль",
+      "submit": "Обновить пароль",
+      "success": "Пароль успешно обновлён",
+      "error": "Не удалось обновить пароль",
+      "validation": {
+        "required": "Заполните все поля",
+        "mismatch": "Пароли не совпадают"
+      }
+    },
+    "delete": {
+      "title": "Удаление аккаунта",
+      "description": "Чтобы удалить аккаунт, подтвердите действие и введите пароль. Это действие необратимо. Для подтверждения введите email {{email}}",
+      "password": "Пароль",
+      "passwordPlaceholder": "Введите пароль",
+      "confirmation": "Подтверждение (введите {{email}})",
+      "submit": "Удалить аккаунт",
+      "success": "Аккаунт удалён",
+      "error": "Не удалось удалить аккаунт",
+      "validation": {
+        "required": "Заполните все поля",
+        "confirmation": "Введите email {{email}} для подтверждения"
+      }
+    }
   }
 }
 

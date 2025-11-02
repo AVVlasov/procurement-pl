@@ -2,17 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const Company = require('../models/Company');
-
-// Инициализация данных при запуске
-const initializeCompanies = async () => {
-  try {
-    // Уже не нужна инициализация, она производится через authAPI
-  } catch (error) {
-    console.error('Error initializing companies:', error);
-  }
-};
-
-initializeCompanies();
+const Experience = require('../models/Experience');
+const Request = require('../models/Request');
+const Message = require('../models/Message');
+const { Types } = require('mongoose');
 
 // GET /my/info - получить мою компанию (требует авторизации) - ДОЛЖНО быть ПЕРЕД /:id
 router.get('/my/info', verifyToken, async (req, res) => {
@@ -44,23 +37,64 @@ router.get('/my/info', verifyToken, async (req, res) => {
 router.get('/my/stats', verifyToken, async (req, res) => {
   try {
     const userId = req.userId;
-    const user = await require('../models/User').findById(userId);
-    
-    if (!user || !user.companyId) {
-      return res.status(404).json({ error: 'Company not found' });
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-    
+
+    let companyId = user.companyId;
+
+    if (!companyId) {
+      const fallbackCompany = await Company.create({
+        fullName: 'Компания пользователя',
+        shortName: 'Компания пользователя',
+        verified: false,
+        partnerGeography: [],
+      });
+
+      user.companyId = fallbackCompany._id;
+      user.updatedAt = new Date();
+      await user.save();
+      companyId = fallbackCompany._id;
+    }
+
+    let company = await Company.findById(companyId);
+
+    if (!company) {
+      company = await Company.create({
+        _id: companyId,
+        fullName: 'Компания пользователя',
+        verified: false,
+        partnerGeography: [],
+      });
+    }
+
+    const companyIdString = company._id.toString();
+    const companyObjectId = Types.ObjectId.isValid(companyIdString)
+      ? new Types.ObjectId(companyIdString)
+      : null;
+
+    const [sentRequests, receivedRequests, unreadMessages] = await Promise.all([
+      Request.countDocuments({ senderCompanyId: companyIdString }),
+      Request.countDocuments({ recipientCompanyId: companyIdString }),
+      companyObjectId
+        ? Message.countDocuments({ recipientCompanyId: companyObjectId, read: false })
+        : Promise.resolve(0),
+    ]);
+
     const stats = {
-      profileViews: Math.floor(Math.random() * 1000),
-      profileViewsChange: Math.floor(Math.random() * 20 - 10),
-      sentRequests: Math.floor(Math.random() * 50),
-      sentRequestsChange: Math.floor(Math.random() * 10 - 5),
-      receivedRequests: Math.floor(Math.random() * 30),
-      receivedRequestsChange: Math.floor(Math.random() * 5 - 2),
-      newMessages: Math.floor(Math.random() * 10),
-      rating: Math.random() * 5
+      profileViews: company?.metrics?.profileViews || 0,
+      profileViewsChange: 0,
+      sentRequests,
+      sentRequestsChange: 0,
+      receivedRequests,
+      receivedRequestsChange: 0,
+      newMessages: unreadMessages,
+      rating: Number.isFinite(company?.rating) ? Number(company.rating) : 0,
     };
-    
+
     res.json(stats);
   } catch (error) {
     console.error('Get company stats error:', error);
@@ -68,15 +102,22 @@ router.get('/my/stats', verifyToken, async (req, res) => {
   }
 });
 
-// Experience endpoints ДОЛЖНЫ быть ДО получения компании по ID
-let companyExperience = [];
-
 // GET /:id/experience - получить опыт компании
 router.get('/:id/experience', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const experience = companyExperience.filter(e => e.companyId === id);
-    res.json(experience);
+    
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid company ID' });
+    }
+
+    const experience = await Experience.find({ companyId: new Types.ObjectId(id) })
+      .sort({ createdAt: -1 });
+    
+    res.json(experience.map(exp => ({
+      ...exp.toObject(),
+      id: exp._id
+    })));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -88,23 +129,24 @@ router.post('/:id/experience', verifyToken, async (req, res) => {
     const { id } = req.params;
     const { confirmed, customer, subject, volume, contact, comment } = req.body;
     
-    const expId = Math.random().toString(36).substr(2, 9);
-    const newExp = {
-      id: expId,
-      _id: expId,
-      companyId: id,
+    if (!Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid company ID' });
+    }
+
+    const newExp = await Experience.create({
+      companyId: new Types.ObjectId(id),
       confirmed: confirmed || false,
       customer: customer || '',
       subject: subject || '',
       volume: volume || '',
       contact: contact || '',
-      comment: comment || '',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+      comment: comment || ''
+    });
     
-    companyExperience.push(newExp);
-    res.status(201).json(newExp);
+    res.status(201).json({
+      ...newExp.toObject(),
+      id: newExp._id
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -114,19 +156,28 @@ router.post('/:id/experience', verifyToken, async (req, res) => {
 router.put('/:id/experience/:expId', verifyToken, async (req, res) => {
   try {
     const { id, expId } = req.params;
-    const index = companyExperience.findIndex(e => (e.id === expId || e._id === expId) && e.companyId === id);
     
-    if (index === -1) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(expId)) {
+      return res.status(400).json({ error: 'Invalid IDs' });
+    }
+
+    const experience = await Experience.findByIdAndUpdate(
+      new Types.ObjectId(expId),
+      {
+        ...req.body,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+    
+    if (!experience || experience.companyId.toString() !== id) {
       return res.status(404).json({ error: 'Experience not found' });
     }
     
-    companyExperience[index] = {
-      ...companyExperience[index],
-      ...req.body,
-      updatedAt: new Date()
-    };
-    
-    res.json(companyExperience[index]);
+    res.json({
+      ...experience.toObject(),
+      id: experience._id
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -136,13 +187,18 @@ router.put('/:id/experience/:expId', verifyToken, async (req, res) => {
 router.delete('/:id/experience/:expId', verifyToken, async (req, res) => {
   try {
     const { id, expId } = req.params;
-    const index = companyExperience.findIndex(e => (e.id === expId || e._id === expId) && e.companyId === id);
     
-    if (index === -1) {
+    if (!Types.ObjectId.isValid(id) || !Types.ObjectId.isValid(expId)) {
+      return res.status(400).json({ error: 'Invalid IDs' });
+    }
+
+    const experience = await Experience.findById(new Types.ObjectId(expId));
+    
+    if (!experience || experience.companyId.toString() !== id) {
       return res.status(404).json({ error: 'Experience not found' });
     }
-    
-    companyExperience.splice(index, 1);
+
+    await Experience.findByIdAndDelete(new Types.ObjectId(expId));
     res.json({ message: 'Experience deleted' });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -155,7 +211,24 @@ router.get('/:id', async (req, res) => {
     const company = await Company.findById(req.params.id);
     
     if (!company) {
-      return res.status(404).json({ error: 'Company not found' });
+      if (!Types.ObjectId.isValid(req.params.id)) {
+        return res.status(404).json({ error: 'Company not found' });
+      }
+
+      const placeholder = await Company.create({
+        _id: new Types.ObjectId(req.params.id),
+        fullName: 'Новая компания',
+        shortName: 'Новая компания',
+        verified: false,
+        partnerGeography: [],
+        industry: '',
+        companySize: '',
+      });
+
+      return res.json({
+        ...placeholder.toObject(),
+        id: placeholder._id,
+      });
     }
     
     res.json({

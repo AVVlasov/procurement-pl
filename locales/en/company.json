@@ -97,7 +97,12 @@
     "description_placeholder": "Product description (min. 10 characters)",
     "quantity": "Quantity",
     "quantity_placeholder": "Quantity",
-    "unit": "Unit of measurement"
+    "unit": "Unit of measurement",
+    "files": "Files",
+    "files_empty": "No files attached",
+    "upload_hint": "Allowed formats: PDF, DOC, DOCX, XLS, XLSX, CSV (up to 15 MB)",
+    "select_files": "Select files (DOC, XLS, PDF)",
+    "uploading": "Uploading..."
   }
 }
 

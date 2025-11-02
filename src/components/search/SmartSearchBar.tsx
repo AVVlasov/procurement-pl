@@ -16,16 +16,20 @@ import { colors } from '../../utils/colorMode'
 interface SmartSearchBarProps {
   onSearch: (query: string, useAI?: boolean) => void
   isLoading?: boolean
+  allowEmptySearch?: boolean
+  onForceSearch?: () => void
 }
 
-export const SmartSearchBar = ({ onSearch, isLoading }: SmartSearchBarProps) => {
+export const SmartSearchBar = ({ onSearch, isLoading, allowEmptySearch = false, onForceSearch }: SmartSearchBarProps) => {
   const { t } = useTranslation('search')
   const [query, setQuery] = useState('')
 
   const handleSearch = () => {
-    if (query.trim()) {
-      onSearch(query, false)
+    if (!query.trim() && !allowEmptySearch) {
+      return
     }
+    onSearch(query.trim(), false)
+    onForceSearch?.()
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -103,7 +107,7 @@ export const SmartSearchBar = ({ onSearch, isLoading }: SmartSearchBarProps) => 
           <Button
             colorPalette="brand"
             onClick={handleSearch}
-            disabled={!query.trim()}
+            disabled={!query.trim() && !allowEmptySearch}
             loading={isLoading}
             size={{ base: 'sm', md: 'lg' }}
             minW={{ base: '80px', md: 'auto' }}
@@ -111,6 +115,11 @@ export const SmartSearchBar = ({ onSearch, isLoading }: SmartSearchBarProps) => 
             {t('common:buttons.search')}
           </Button>
         </Flex>
+        {allowEmptySearch && !query.trim() && (
+          <Text fontSize="xs" color="gray.500">
+            {t('search_bar.filters_hint')}
+          </Text>
+        )}
       </VStack>
     </Box>
   )

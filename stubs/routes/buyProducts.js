@@ -2,6 +2,74 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const BuyProduct = require('../models/BuyProduct');
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
+const UPLOADS_ROOT = path.join(__dirname, '..', '..', 'remote-assets', 'uploads', 'buy-products');
+const ensureDirectory = (dirPath) => {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+ensureDirectory(UPLOADS_ROOT);
+
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+const ALLOWED_MIME_TYPES = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+]);
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const productId = req.params.id || 'common';
+    const productDir = path.join(UPLOADS_ROOT, productId);
+    ensureDirectory(productDir);
+    cb(null, productDir);
+  },
+  filename: (req, file, cb) => {
+    const originalExtension = path.extname(file.originalname) || '';
+    const baseName = path
+      .basename(file.originalname, originalExtension)
+      .replace(/[^a-zA-Z0-9-_]+/g, '_')
+      .toLowerCase();
+    cb(null, `${Date.now()}_${baseName}${originalExtension}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+  },
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      cb(null, true);
+      return;
+    }
+
+    req.fileValidationError = 'UNSUPPORTED_FILE_TYPE';
+    cb(null, false);
+  },
+});
+
+const handleSingleFileUpload = (req, res, next) => {
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('[BuyProducts] Multer error:', err.message);
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ error: 'File is too large. Maximum size is 15MB.' });
+      }
+      return res.status(400).json({ error: err.message });
+    }
+    next();
+  });
+};
+
 
 // Функция для логирования с проверкой DEV переменной
 const log = (message, data = '') => {
@@ -43,7 +111,7 @@ router.post('/', verifyToken, async (req, res) => {
   try {
     const { name, description, quantity, unit, status } = req.body;
 
-    log('[BuyProducts] Creating new product:', { name, description, quantity, companyId: req.user.companyId });
+    log('[BuyProducts] Creating new product:', { name, description, quantity, companyId: req.companyId });
 
     if (!name || !description || !quantity) {
       return res.status(400).json({
@@ -58,7 +126,7 @@ router.post('/', verifyToken, async (req, res) => {
     }
 
     const newProduct = new BuyProduct({
-      companyId: req.user.companyId,
+      companyId: req.companyId,
       name: name.trim(),
       description: description.trim(),
       quantity: quantity.trim(),
@@ -97,7 +165,7 @@ router.put('/:id', verifyToken, async (req, res) => {
     }
 
     // Проверить, что товар принадлежит текущей компании
-    if (product.companyId !== req.user.companyId) {
+    if (product.companyId !== req.companyId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -134,7 +202,7 @@ router.delete('/:id', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    if (product.companyId.toString() !== req.user.companyId.toString()) {
+    if (product.companyId.toString() !== req.companyId.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -153,11 +221,9 @@ router.delete('/:id', verifyToken, async (req, res) => {
 });
 
 // POST /buy-products/:id/files - добавить файл к товару
-router.post('/:id/files', verifyToken, async (req, res) => {
+router.post('/:id/files', verifyToken, handleSingleFileUpload, async (req, res) => {
   try {
     const { id } = req.params;
-    const { fileName, fileUrl, fileType, fileSize } = req.body;
-
     const product = await BuyProduct.findById(id);
 
     if (!product) {
@@ -165,23 +231,33 @@ router.post('/:id/files', verifyToken, async (req, res) => {
     }
 
     // Только владелец товара может добавить файл
-    if (product.companyId.toString() !== req.user.companyId.toString()) {
+    if (product.companyId.toString() !== req.companyId.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
+    if (req.fileValidationError) {
+      return res.status(400).json({ error: 'Unsupported file type. Use PDF, DOC, DOCX, XLS, XLSX or CSV.' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ error: 'File is required' });
+    }
+
+    const relativePath = path.join('buy-products', id, req.file.filename).replace(/\\/g, '/');
     const file = {
-      id: 'file-' + Date.now(),
-      name: fileName,
-      url: fileUrl,
-      type: fileType,
-      size: fileSize,
-      uploadedAt: new Date()
+      id: `file-${Date.now()}`,
+      name: req.file.originalname,
+      url: `/uploads/${relativePath}`,
+      type: req.file.mimetype,
+      size: req.file.size,
+      uploadedAt: new Date(),
+      storagePath: relativePath,
     };
 
     product.files.push(file);
     await product.save();
 
-    log('[BuyProducts] File added to product:', id);
+    log('[BuyProducts] File added to product:', id, file.name);
 
     res.json(product);
   } catch (error) {
@@ -204,14 +280,28 @@ router.delete('/:id/files/:fileId', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    if (product.companyId.toString() !== req.user.companyId.toString()) {
+    if (product.companyId.toString() !== req.companyId.toString()) {
       return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const fileToRemove = product.files.find((f) => f.id === fileId);
+    if (!fileToRemove) {
+      return res.status(404).json({ error: 'File not found' });
     }
 
     product.files = product.files.filter(f => f.id !== fileId);
     await product.save();
 
-    log('[BuyProducts] File deleted from product:', id);
+    const storedPath = fileToRemove.storagePath || fileToRemove.url.replace(/^\/uploads\//, '');
+    const absolutePath = path.join(__dirname, '..', '..', 'remote-assets', 'uploads', storedPath);
+
+    fs.promises.unlink(absolutePath).catch((unlinkError) => {
+      if (unlinkError && unlinkError.code !== 'ENOENT') {
+        console.error('[BuyProducts] Failed to remove file from disk:', unlinkError.message);
+      }
+    });
+
+    log('[BuyProducts] File deleted from product:', id, fileId);
 
     res.json(product);
   } catch (error) {
@@ -227,7 +317,7 @@ router.delete('/:id/files/:fileId', verifyToken, async (req, res) => {
 router.post('/:id/accept', verifyToken, async (req, res) => {
   try {
     const { id } = req.params;
-    const companyId = req.user.companyId;
+    const companyId = req.companyId;
 
     const product = await BuyProduct.findById(id);
 

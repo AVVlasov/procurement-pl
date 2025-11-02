@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import {
   Box,
   Container,
@@ -47,18 +47,31 @@ export const SearchPage = () => {
 
   const [sendMessage, { isLoading: isSendingMessage }] = useSendMessageMutation()
 
+  const hasActiveFilters = useMemo(() => {
+    return Boolean(
+      (filters.industries && filters.industries.length > 0) ||
+      (filters.companySize && filters.companySize.length > 0) ||
+      (filters.geography && filters.geography.length > 0) ||
+      (filters.minRating && filters.minRating > 0) ||
+      filters.hasReviews ||
+      filters.hasAcceptedDocs
+    )
+  }, [filters])
+
   const {
     data: searchResults,
     isLoading: isSearching,
     refetch,
   } = useSearchCompaniesQuery(
-    { ...filters, query: searchQuery },
-    { skip: !searchQuery }
+    { ...filters, query: searchQuery.trim() },
+    {
+      skip: !searchQuery.trim() && !hasActiveFilters,
+    }
   )
 
   // Переводим запрос при изменении фильтров
   useEffect(() => {
-    if (searchQuery) {
+    if (searchQuery.trim() || hasActiveFilters) {
       // Небольшая задержка, чтобы дать RTK Query время обработать новые параметры,
       // затем явно вызываем refetch
       const timer = setTimeout(() => {
@@ -66,7 +79,7 @@ export const SearchPage = () => {
       }, 50)
       return () => clearTimeout(timer)
     }
-  }, [filters.industries, filters.companySize, filters.geography, filters.minRating, refetch, searchQuery])
+  }, [filters.industries, filters.companySize, filters.geography, filters.minRating, filters.hasReviews, filters.hasAcceptedDocs, refetch, searchQuery, hasActiveFilters])
 
   const [addToFavorites] = useAddToFavoritesMutation()
   const [removeFromFavorites] = useRemoveFromFavoritesMutation()
@@ -93,6 +106,10 @@ export const SearchPage = () => {
       sortOrder: 'desc',
     })
   }
+
+  const handleApplyFilters = useCallback(() => {
+    refetch()
+  }, [refetch])
 
   const handleContact = (companyId: string, companyName?: string) => {
     setSelectedCompanyId(companyId)
@@ -160,6 +177,8 @@ export const SearchPage = () => {
             <SmartSearchBar
               onSearch={handleSearch}
               isLoading={isSearching}
+                allowEmptySearch={hasActiveFilters}
+                onForceSearch={refetch}
             />
           </Box>
 
@@ -176,6 +195,7 @@ export const SearchPage = () => {
                   filters={filters}
                   onChange={handleFiltersChange}
                   onReset={handleResetFilters}
+                  onApply={handleApplyFilters}
                 />
               </Box>
             </GridItem>

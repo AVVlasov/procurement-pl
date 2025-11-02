@@ -11,6 +11,12 @@ const requestSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  subject: {
+    type: String,
+    required: false,
+    trim: true,
+    default: ''
+  },
   text: {
     type: String,
     required: true
@@ -21,6 +27,7 @@ const requestSchema = new mongoose.Schema({
     url: String,
     type: String,
     size: Number,
+    storagePath: String,
     uploadedAt: {
       type: Date,
       default: Date.now
@@ -39,6 +46,18 @@ const requestSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  responseFiles: [{
+    id: String,
+    name: String,
+    url: String,
+    type: String,
+    size: Number,
+    storagePath: String,
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   respondedAt: {
     type: Date,
     default: null
@@ -58,5 +77,6 @@ const requestSchema = new mongoose.Schema({
 requestSchema.index({ senderCompanyId: 1, createdAt: -1 });
 requestSchema.index({ recipientCompanyId: 1, createdAt: -1 });
 requestSchema.index({ senderCompanyId: 1, recipientCompanyId: 1 });
+requestSchema.index({ subject: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Request', requestSchema);

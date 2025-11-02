@@ -1,80 +1,376 @@
-import React, { useState } from 'react'
-import { Box, Text, VStack, HStack, Button, Badge, Field, Input, NativeSelect, Table, Container, Tabs, Heading, Textarea, Dialog, Flex } from '@chakra-ui/react'
+import React, { useEffect, useMemo, useState } from 'react'
+import {
+  Box,
+  Text,
+  VStack,
+  HStack,
+  Button,
+  Badge,
+  Field,
+  Input,
+  NativeSelect,
+  Table,
+  Container,
+  Tabs,
+  Heading,
+  Textarea,
+  Dialog,
+  Checkbox,
+  IconButton,
+  Spinner,
+} from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { FiFileText, FiSend, FiDownload, FiTrash2, FiCheck, FiX, FiUpload, FiEye } from 'react-icons/fi'
+import { FiFileText, FiSend, FiDownload, FiTrash2, FiEye, FiZap } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useAuth } from '../../hooks/useAuth'
-import { useSendBulkRequestMutation, useGetSentRequestsQuery, useGetReceivedRequestsQuery, useRespondToRequestMutation, useDeleteRequestMutation, useGetLastReportQuery } from '../../__data__/api/requestsApi'
-import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
+import {
+  useSendBulkRequestMutation,
+  useGetSentRequestsQuery,
+  useGetReceivedRequestsQuery,
+  useRespondToRequestMutation,
+  useDeleteRequestMutation,
+  type Request as RequestModel,
+  type RequestFile,
+} from '../../__data__/api/requestsApi'
+import { useSearchCompaniesQuery, useAiSearchMutation } from '../../__data__/api/searchApi'
+import {
+  useGetCompanyBuyProductsQuery,
+  useGetBuyProductAcceptancesQuery,
+} from '../../__data__/api/buyProductsApi'
 import { useToast } from '../../hooks/useToast'
 import * as XLSX from 'xlsx'
+
+type RecipientOption = {
+  id: string
+  name: string
+  source: 'acceptance' | 'ai' | 'all'
+  description?: string
+}
+
+const MAX_RECIPIENTS = 20
 
 const RequestsPage = () => {
   const showToast = useToast()
   const { t } = useTranslation('common')
   const { company } = useAuth()
-  const companyId = company?.id
+  const companyId = company?.id || ''
   const [activeTab, setActiveTab] = useState('sent')
 
-  // Queries and Mutations
   const { data: sentRequests = [] } = useGetSentRequestsQuery()
   const { data: receivedRequests = [] } = useGetReceivedRequestsQuery()
   const [sendRequest, { isLoading: isSending }] = useSendBulkRequestMutation()
-  const [respondRequest] = useRespondToRequestMutation()
+  const [respondRequest, { isLoading: isSendingResponse }] = useRespondToRequestMutation()
   const [deleteRequest] = useDeleteRequestMutation()
-  const { data: companyOptions } = useSearchCompaniesQuery({ limit: 100 })
-  const { data: lastReport } = useGetLastReportQuery()
+  const { data: companyOptions } = useSearchCompaniesQuery({ limit: 200 })
+  const { data: products = [] } = useGetCompanyBuyProductsQuery(companyId, { skip: !companyId })
 
-  // Form states for sending request
   const [requestText, setRequestText] = useState('')
+  const [subject, setSubject] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>('')
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const requestFileInputRef = React.useRef<HTMLInputElement>(null)
+  const [recipientSearch, setRecipientSearch] = useState('')
+  const [aiRecipients, setAiRecipients] = useState<RecipientOption[]>([])
+  const [aiSearch, { isLoading: isAiLoading }] = useAiSearchMutation()
 
-  // Form state for responding
+  const { data: productAcceptances = [], isLoading: isLoadingAcceptances } = useGetBuyProductAcceptancesQuery(
+    selectedProductId,
+    { skip: !selectedProductId },
+  )
+
   const [respondingTo, setRespondingTo] = useState<string | null>(null)
   const [responseText, setResponseText] = useState('')
   const [responseStatus, setResponseStatus] = useState<'accepted' | 'rejected'>('accepted')
+  const [responseFiles, setResponseFiles] = useState<File[]>([])
+  const responseFileInputRef = React.useRef<HTMLInputElement>(null)
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      setSelectedFiles(Array.from(e.target.files))
+  const companyDictionary = useMemo(() => {
+    if (!companyOptions?.companies) {
+      return new Map<string, { name: string }>()
+    }
+
+    return new Map(
+      companyOptions.companies.map((company: any) => [
+        company.id,
+        { name: company.shortName || company.fullName || company.id },
+      ]),
+    )
+  }, [companyOptions])
+
+  useEffect(() => {
+    if (!selectedProductId) {
+      setSubject('')
+      setAiRecipients([])
+      return
+    }
+
+    const product = products.find((item: any) => item._id === selectedProductId)
+    if (product) {
+      setSubject(product.name)
+    }
+  }, [products, selectedProductId])
+
+  const acceptanceOptions = useMemo<RecipientOption[]>(() => {
+    if (!Array.isArray(productAcceptances) || productAcceptances.length === 0) {
+      return []
+    }
+
+    return productAcceptances
+      .map((acceptance: any) => {
+        if (!acceptance?.companyId) {
+          return null
+        }
+
+        if (typeof acceptance.companyId === 'string') {
+          const dictionaryItem = companyDictionary.get(acceptance.companyId)
+          return {
+            id: acceptance.companyId,
+            name: dictionaryItem?.name || acceptance.companyId,
+            source: 'acceptance' as const,
+          }
+        }
+
+        const companyObject = acceptance.companyId
+        const companyIdValue = companyObject._id?.toString()
+        if (!companyIdValue) {
+          return null
+        }
+
+        return {
+          id: companyIdValue,
+          name: companyObject.shortName || companyObject.fullName || companyIdValue,
+          source: 'acceptance' as const,
+        }
+      })
+      .filter(Boolean) as RecipientOption[]
+  }, [productAcceptances, companyDictionary])
+
+  const allCompanyOptions = useMemo<RecipientOption[]>(() => {
+    if (!companyOptions?.companies) {
+      return []
+    }
+
+    return companyOptions.companies.map((company: any) => ({
+      id: company.id,
+      name: company.shortName || company.fullName || company.id,
+      source: 'all' as const,
+    }))
+  }, [companyOptions])
+
+  const combinedRecipients = useMemo(() => {
+    const recipientsMap = new Map<string, RecipientOption>()
+    acceptanceOptions.forEach((option) => recipientsMap.set(option.id, option))
+    aiRecipients.forEach((option) => recipientsMap.set(option.id, option))
+
+    if (recipientSearch.trim().length > 0 || recipientsMap.size === 0) {
+      allCompanyOptions.forEach((option) => {
+        if (!recipientsMap.has(option.id)) {
+          recipientsMap.set(option.id, option)
+        }
+      })
+    }
+
+    const query = recipientSearch.trim().toLowerCase()
+    const sortOrder: Record<RecipientOption['source'], number> = {
+      acceptance: 0,
+      ai: 1,
+      all: 2,
+    }
+
+    return Array.from(recipientsMap.values())
+      .filter((option) => {
+        if (!query) {
+          return true
+        }
+        return option.name.toLowerCase().includes(query) || option.id.toLowerCase().includes(query)
+      })
+      .sort((a, b) => {
+        const orderDiff = sortOrder[a.source] - sortOrder[b.source]
+        if (orderDiff !== 0) {
+          return orderDiff
+        }
+        return a.name.localeCompare(b.name)
+      })
+      .slice(0, 120)
+  }, [acceptanceOptions, aiRecipients, allCompanyOptions, recipientSearch])
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) {
+      return
+    }
+    setSelectedFiles(Array.from(files))
+  }
+
+  const handleRemoveSelectedFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== index))
+    if (requestFileInputRef.current && selectedFiles.length === 1) {
+      requestFileInputRef.current.value = ''
     }
   }
 
+  const toggleRecipient = (companyId: string, checked: boolean) => {
+    setSelectedRecipients((prev) => {
+      if (!checked) {
+        return prev.filter((id) => id !== companyId)
+      }
+
+      if (prev.includes(companyId)) {
+        return prev
+      }
+
+      if (prev.length >= MAX_RECIPIENTS) {
+        showToast.warning(t('requests.recipientsLimit') || 'Максимум 20 получателей')
+        return prev
+      }
+
+      return [...prev, companyId]
+    })
+  }
+
   const handleSendRequest = async () => {
-    if (!requestText.trim() || selectedRecipients.length === 0 || selectedRecipients.length > 20) {
-      showToast.warning('Проверьте текст запроса и выбранных получателей (макс 20)')
+    if (!subject.trim()) {
+      showToast.warning(t('requests.subjectRequired') || 'Укажите предмет закупки')
+      return
+    }
+
+    if (!requestText.trim()) {
+      showToast.warning(t('requests.textRequired') || 'Введите текст запроса')
+      return
+    }
+
+    if (selectedRecipients.length === 0) {
+      showToast.warning(t('requests.recipientsEmpty') || 'Выберите получателей')
+      return
+    }
+
+    if (selectedRecipients.length > MAX_RECIPIENTS) {
+      showToast.warning(t('requests.recipientsLimit') || 'Максимум 20 получателей')
       return
     }
 
     try {
       await sendRequest({
         text: requestText.trim(),
+        subject: subject.trim(),
         recipientCompanyIds: selectedRecipients,
-        files: selectedFiles.map(f => ({
-          name: f.name,
-          type: f.type,
-          size: f.size
-        }))
+        productId: selectedProductId || undefined,
+        files: selectedFiles,
       }).unwrap()
 
-      showToast.success('Запрос отправлен успешно')
+      showToast.success(t('requests.sentSuccess') || 'Запрос отправлен успешно')
       setRequestText('')
+      setSubject('')
       setSelectedRecipients([])
       setSelectedFiles([])
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
+      setSelectedProductId('')
+      setRecipientSearch('')
+      setAiRecipients([])
+      if (requestFileInputRef.current) {
+        requestFileInputRef.current.value = ''
       }
     } catch (error) {
-      showToast.error('Ошибка при отправке запроса')
+      console.error('[RequestsPage] sendRequest error:', error)
+      showToast.error(t('requests.sendError') || 'Ошибка при отправке запроса')
+    }
+  }
+
+  const respondingRequest = useMemo(() => {
+    if (!respondingTo) {
+      return null
+    }
+    return receivedRequests.find((item: RequestModel) => item._id === respondingTo || item.id === respondingTo) || null
+  }, [receivedRequests, respondingTo])
+
+  useEffect(() => {
+    if (!respondingTo) {
+      setResponseText('')
+      setResponseStatus('accepted')
+      setResponseFiles([])
+      if (responseFileInputRef.current) {
+        responseFileInputRef.current.value = ''
+      }
+      return
+    }
+
+    if (respondingRequest?.response) {
+      setResponseText(respondingRequest.response)
+      setResponseStatus(respondingRequest.status || 'accepted')
+    } else {
+      setResponseText('')
+      setResponseStatus('accepted')
+    }
+  }, [respondingRequest, respondingTo])
+
+  const handleResponseFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files
+    if (!files || files.length === 0) {
+      return
+    }
+    setResponseFiles(Array.from(files))
+  }
+
+  const handleRemoveResponseFile = (index: number) => {
+    setResponseFiles((prev) => prev.filter((_, idx) => idx !== index))
+    if (responseFileInputRef.current && responseFiles.length === 1) {
+      responseFileInputRef.current.value = ''
+    }
+  }
+
+  const handleAiSuggest = async () => {
+    const baseQuery = subject.trim() || requestText.trim()
+    if (!baseQuery) {
+      showToast.warning(t('requests.aiQueryRequired') || 'Сначала заполните предмет или текст запроса')
+      return
+    }
+
+    try {
+      const aiResult = await aiSearch({
+        query: baseQuery,
+        context: {
+          companyId,
+          type: 'buy',
+        },
+      }).unwrap()
+
+      if (!aiResult?.companies || aiResult.companies.length === 0) {
+        showToast.info(t('requests.aiEmpty') || 'Подходящих компаний не найдено')
+        return
+      }
+
+      setAiRecipients((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id))
+        const updated = [...prev]
+
+        aiResult.companies.forEach((company: any) => {
+          if (!company?.id || existingIds.has(company.id)) {
+            return
+          }
+
+          const name = company.shortName || company.fullName || company.id
+          updated.push({
+            id: company.id,
+            name,
+            source: 'ai',
+            description: company.reason || undefined,
+          })
+          existingIds.add(company.id)
+        })
+
+        return updated
+      })
+
+      showToast.success(t('requests.aiSuccess') || 'Добавлены рекомендации по компаниям')
+    } catch (error) {
+      console.error('[RequestsPage] AI suggestion error:', error)
+      showToast.error(t('requests.aiError') || 'Не удалось получить подсказки по компаниям')
     }
   }
 
   const handleRespondToRequest = async (requestId: string) => {
     if (!responseText.trim()) {
-      showToast.warning('Введите текст ответа')
+      showToast.warning(t('requests.responseTextRequired') || 'Введите текст ответа')
       return
     }
 
@@ -82,29 +378,106 @@ const RequestsPage = () => {
       await respondRequest({
         id: requestId,
         response: responseText.trim(),
-        status: responseStatus
+        status: responseStatus,
+        files: responseFiles,
       }).unwrap()
 
-      showToast.success('Ответ отправлен')
+      showToast.success(t('requests.responseSent') || 'Ответ отправлен')
       setRespondingTo(null)
       setResponseText('')
       setResponseStatus('accepted')
+      setResponseFiles([])
+      if (responseFileInputRef.current) {
+        responseFileInputRef.current.value = ''
+      }
     } catch (error) {
-      showToast.error('Ошибка при отправке ответа')
+      console.error('[RequestsPage] respondRequest error:', error)
+      showToast.error(t('requests.responseError') || 'Ошибка при отправке ответа')
     }
   }
 
   const handleDeleteRequest = async (requestId: string) => {
     try {
       await deleteRequest(requestId).unwrap()
-      showToast.success('Запрос удален')
+      showToast.success(t('requests.deleted') || 'Запрос удалён')
     } catch (error) {
-      showToast.error('Ошибка при удалении')
+      console.error('[RequestsPage] deleteRequest error:', error)
+      showToast.error(t('requests.deleteError') || 'Ошибка при удалении')
     }
   }
 
   const getCompanyName = (companyId: string) => {
-    return companyOptions?.companies?.find(c => c.id === companyId)?.shortName || companyId
+    return companyDictionary.get(companyId)?.name || companyId
+  }
+
+  const renderFileList = (files?: RequestFile[]) => {
+    if (!files || files.length === 0) {
+      return (
+        <Text fontSize="xs" color="gray.500">
+          {t('requests.noFiles') || 'Файлы не приложены'}
+        </Text>
+      )
+    }
+
+    return (
+      <VStack align="start" gap={1} maxW="280px">
+        {files.map((file) => (
+          <Button
+            key={file.id}
+            as="a"
+            href={file.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            size="sm"
+            variant="link"
+            colorPalette="brand"
+            gap={2}
+          >
+            <FiDownload />
+            <Text>{file.name}</Text>
+          </Button>
+        ))}
+      </VStack>
+    )
+  }
+
+  const groupedSentRequests = useMemo(() => {
+    const groups = new Map<string, RequestModel[]>()
+    sentRequests.forEach((request: RequestModel) => {
+      const subjectKey = request.subject?.trim() || t('requests.subjectFallback') || 'Без предмета'
+      if (!groups.has(subjectKey)) {
+        groups.set(subjectKey, [])
+      }
+      groups.get(subjectKey)?.push(request)
+    })
+
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [sentRequests, t])
+
+  const groupedResponses = useMemo(() => {
+    const responses = sentRequests.filter((request: RequestModel) => Boolean(request.response))
+    const groups = new Map<string, RequestModel[]>()
+
+    responses.forEach((request) => {
+      const subjectKey = request.subject?.trim() || t('requests.subjectFallback') || 'Без предмета'
+      if (!groups.has(subjectKey)) {
+        groups.set(subjectKey, [])
+      }
+      groups.get(subjectKey)?.push(request)
+    })
+
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [sentRequests, t])
+
+  const formatDate = (value?: string) => {
+    if (!value) {
+      return '-'
+    }
+    try {
+      return new Date(value).toLocaleDateString('ru-RU')
+    } catch (error) {
+      return value
+    }
   }
 
   return (
@@ -127,194 +500,331 @@ const RequestsPage = () => {
                 {t('requests.receivedTab') || 'Запросы полученные'}
               </Tabs.Trigger>
               <Tabs.Trigger value="responses" whiteSpace="nowrap">
-                Ответы на запросы
+                {t('requests.responsesTab') || 'Ответы на запросы'}
               </Tabs.Trigger>
             </Tabs.List>
 
-            {/* Sent Requests Tab */}
             <Box flex="1" p={6}>
               <Tabs.Content value="sent">
                 <VStack gap={6} align="stretch">
-                  {/* Send Request Form */}
                   <VStack align="stretch" gap={4} p={4} borderWidth="1px" borderRadius="lg" bg="white">
-                    <Text fontWeight="semibold">Отправить новый запрос</Text>
+                    <Text fontWeight="semibold">{t('requests.newRequest') || 'Отправить новый запрос'}</Text>
 
                     <Field.Root required>
-                      <Field.Label>Текст запроса</Field.Label>
+                      <Field.Label>{t('requests.product') || 'Выберите товар'}</Field.Label>
+                      <NativeSelect.Root size="md">
+                        <NativeSelect.Field
+                          value={selectedProductId}
+                          onChange={(event) => {
+                            setSelectedProductId(event.target.value)
+                            setSelectedRecipients([])
+                          }}
+                        >
+                          <option value="">{t('requests.productPlaceholder') || 'Выберите товар из списка'}</option>
+                          {products.map((product: any) => (
+                            <option key={product._id} value={product._id}>
+                              {product.name}
+                            </option>
+                          ))}
+                        </NativeSelect.Field>
+                        <NativeSelect.Indicator />
+                      </NativeSelect.Root>
+                      {isLoadingAcceptances && (
+                        <HStack gap={2} mt={2} color="gray.500" fontSize="xs">
+                          <Spinner size="xs" />
+                          <Text>{t('requests.acceptancesLoading') || 'Загружаем акцептовавшие компании...'}</Text>
+                        </HStack>
+                      )}
+                    </Field.Root>
+
+                    <Field.Root required>
+                      <Field.Label>{t('requests.subject') || 'Предмет закупки'}</Field.Label>
+                      <Input
+                        value={subject}
+                        onChange={(event) => setSubject(event.target.value)}
+                        placeholder={t('requests.subjectPlaceholder') || 'Введите предмет закупки'}
+                      />
+                    </Field.Root>
+
+                    <Field.Root required>
+                      <Field.Label>{t('requests.text') || 'Текст запроса'}</Field.Label>
                       <Textarea
                         value={requestText}
-                        onChange={(e) => setRequestText(e.target.value)}
-                        placeholder="Введите текст запроса"
+                        onChange={(event) => setRequestText(event.target.value)}
+                        placeholder={t('requests.textPlaceholder') || 'Введите текст запроса'}
                         minH="100px"
                       />
                     </Field.Root>
 
                     <Field.Root>
-                      <Field.Label>Добавить файлы</Field.Label>
-                      <input
+                      <Field.Label>{t('requests.attachments') || 'Добавить файлы'}</Field.Label>
+                      <Input
+                        ref={requestFileInputRef}
                         type="file"
-                        ref={fileInputRef}
                         onChange={handleFileSelect}
                         multiple
-                        style={{ display: 'block' }}
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
                       />
                       {selectedFiles.length > 0 && (
                         <VStack gap={2} mt={2} align="start">
-                          {selectedFiles.map((f, idx) => (
-                            <Text key={idx} fontSize="sm" color="gray.600">
-                              📎 {f.name} ({(f.size / 1024).toFixed(1)} KB)
-                            </Text>
+                          {selectedFiles.map((file, index) => (
+                            <HStack key={`${file.name}-${index}`} gap={2} fontSize="sm" color="gray.600">
+                              <FiFileText />
+                              <Text>{file.name}</Text>
+                              <Text color="gray.400">({(file.size / 1024).toFixed(1)} KB)</Text>
+                              <IconButton
+                                size="xs"
+                                variant="ghost"
+                                colorPalette="red"
+                                aria-label={t('requests.removeFile') || 'Удалить файл'}
+                                onClick={() => handleRemoveSelectedFile(index)}
+                              >
+                                <FiTrash2 />
+                              </IconButton>
+                            </HStack>
                           ))}
                         </VStack>
                       )}
                     </Field.Root>
 
-                    <Field.Root required>
-                      <Field.Label>Отправить к компаниям</Field.Label>
-                      <NativeSelect.Root size="md">
-                        <NativeSelect.Field
-                          multiple
-                          value={selectedRecipients}
-                          onChange={(e) => setSelectedRecipients(Array.from((e.target as HTMLSelectElement).selectedOptions).map(o => o.value))}
+                    <VStack align="stretch" gap={3} borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
+                      <HStack justify="space-between" align="center">
+                        <Text fontWeight="semibold" fontSize="sm">
+                          {t('requests.recipients') || 'Получатели'}
+                        </Text>
+                        <Badge colorPalette="purple" fontSize="xs">
+                          {t('requests.recipientsCount', { count: selectedRecipients.length })
+                            || `Выбрано: ${selectedRecipients.length}`}
+                        </Badge>
+                      </HStack>
+
+                      <Input
+                        value={recipientSearch}
+                        onChange={(event) => setRecipientSearch(event.target.value)}
+                        placeholder={t('requests.recipientsSearch') || 'Поиск компаний'}
+                        size="sm"
+                      />
+
+                      <HStack gap={2} flexWrap="wrap">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          colorPalette="brand"
+                          gap={2}
+                          onClick={handleAiSuggest}
+                          disabled={isAiLoading}
                         >
-                          {(companyOptions?.companies || []).map((c) => (
-                            <option key={c.id} value={c.id}>{c.shortName || c.fullName}</option>
-                          ))}
-                        </NativeSelect.Field>
-                        <NativeSelect.Indicator />
-                      </NativeSelect.Root>
-                      <Text fontSize="xs" color="gray.500">
-                        Выбрано: {selectedRecipients.length} / 20
-                      </Text>
-                    </Field.Root>
+                          {isAiLoading ? <Spinner size="xs" /> : <FiZap />}
+                          <Text>{t('requests.aiButton') || 'Подобрать компании (ИИ)'}</Text>
+                        </Button>
+                      </HStack>
+
+                      {combinedRecipients.length === 0 ? (
+                        <Text fontSize="xs" color="gray.500">
+                          {t('requests.noRecipients') || 'Компании не найдены. Попробуйте изменить фильтры или запрос.'}
+                        </Text>
+                      ) : (
+                        <VStack align="stretch" gap={2} maxH="240px" overflowY="auto" pr={1}>
+                          {combinedRecipients.map((option) => {
+                            const isSelected = selectedRecipients.includes(option.id)
+                            const badgeColor = option.source === 'acceptance' ? 'green' : option.source === 'ai' ? 'orange' : 'gray'
+
+                            return (
+                              <Box key={option.id} borderWidth="1px" borderRadius="md" p={2} bg={isSelected ? 'blue.50' : 'white'}>
+                                <Checkbox.Root
+                                  checked={isSelected}
+                                  onCheckedChange={(details) => toggleRecipient(option.id, details.checked)}
+                                >
+                                  <Checkbox.HiddenInput />
+                                  <Checkbox.Control />
+                                  <HStack justify="space-between" gap={3} flexWrap="wrap">
+                                    <Checkbox.Label cursor="pointer" fontWeight="medium">
+                                      {option.name}
+                                    </Checkbox.Label>
+                                    <Badge colorPalette={badgeColor} fontSize="10px">
+                                      {option.source === 'acceptance'
+                                        ? t('requests.recipientAcceptance') || 'Акцепт'
+                                        : option.source === 'ai'
+                                          ? t('requests.recipientAi') || 'ИИ'
+                                          : t('requests.recipientAll') || 'Каталог'}
+                                    </Badge>
+                                  </HStack>
+                                </Checkbox.Root>
+                                {option.description && (
+                                  <Text fontSize="xs" color="gray.500" mt={1}>
+                                    {option.description}
+                                  </Text>
+                                )}
+                              </Box>
+                            )
+                          })}
+                        </VStack>
+                      )}
+                    </VStack>
 
                     <HStack>
                       <Button
                         colorPalette="green"
                         onClick={handleSendRequest}
-                        disabled={!requestText.trim() || selectedRecipients.length === 0 || selectedRecipients.length > 20}
+                        disabled={
+                          isSending
+                          || !requestText.trim()
+                          || !subject.trim()
+                          || selectedRecipients.length === 0
+                          || selectedRecipients.length > MAX_RECIPIENTS
+                        }
                         loading={isSending}
+                        gap={2}
                       >
                         <FiSend />
-                        <Text ml={2}>Отправить запрос</Text>
+                        <Text>{t('requests.sendButton') || 'Отправить запрос'}</Text>
                       </Button>
                     </HStack>
                   </VStack>
 
-                  {/* Sent Requests List */}
                   <VStack gap={4} align="stretch">
-                    <Text fontWeight="semibold">История отправленных запросов</Text>
-                    {sentRequests.length > 0 ? (
-                      <Box overflowX="auto">
-                        <Table.Root variant="line">
-                          <Table.Header>
-                            <Table.Row>
-                              <Table.ColumnHeader>К компания</Table.ColumnHeader>
-                              <Table.ColumnHeader>Текст</Table.ColumnHeader>
-                              <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                              <Table.ColumnHeader>Ответ</Table.ColumnHeader>
-                              <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                              <Table.ColumnHeader>Действия</Table.ColumnHeader>
-                            </Table.Row>
-                          </Table.Header>
-                          <Table.Body>
-                            {sentRequests.map((req: any) => (
-                              <Table.Row key={req._id}>
-                                <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
-                                <Table.Cell fontSize="sm" color="gray.600">
-                                  {req.text.substring(0, 40)}...
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Badge colorPalette={req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'}>
-                                    {req.status === 'pending' ? 'Ожидание' : req.status === 'accepted' ? 'Принято' : 'Отклонено'}
-                                  </Badge>
-                                </Table.Cell>
-                                <Table.Cell fontSize="sm" color="gray.600">
-                                  {req.response?.substring(0, 30) || '-'}
-                                </Table.Cell>
-                                <Table.Cell fontSize="xs" color="gray.400">
-                                  {new Date(req.createdAt).toLocaleDateString('ru-RU')}
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Button
-                                    size="xs"
-                                    variant="outline"
-                                    colorPalette="red"
-                                    onClick={() => handleDeleteRequest(req._id)}
-                                  >
-                                    <FiTrash2 />
-                                  </Button>
-                                </Table.Cell>
-                              </Table.Row>
-                            ))}
-                          </Table.Body>
-                        </Table.Root>
-                      </Box>
+                    <Text fontWeight="semibold">{t('requests.sentHistory') || 'История отправленных запросов'}</Text>
+                    {groupedSentRequests.length > 0 ? (
+                      <VStack align="stretch" gap={4}>
+                        {groupedSentRequests.map(([groupSubject, requests]) => (
+                          <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={4} bg="white">
+                            <Heading size="sm" mb={3}>
+                              {groupSubject}
+                            </Heading>
+                            <Box overflowX="auto">
+                              <Table.Root variant="line">
+                                <Table.Header>
+                                  <Table.Row>
+                                    <Table.ColumnHeader>{t('requests.tableCompany') || 'Компания'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableResponse') || 'Ответ'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
+                                  </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                  {requests.map((req) => (
+                                    <Table.Row key={req._id || req.id}>
+                                      <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
+                                      <Table.Cell fontSize="sm" color="gray.600">
+                                        {req.text}
+                                      </Table.Cell>
+                                      <Table.Cell>{renderFileList(req.files)}</Table.Cell>
+                                      <Table.Cell>
+                                        <Badge
+                                          colorPalette={
+                                            req.status === 'accepted'
+                                              ? 'green'
+                                              : req.status === 'rejected'
+                                                ? 'red'
+                                                : 'yellow'
+                                          }
+                                        >
+                                          {req.status === 'pending'
+                                            ? t('requests.statusPending') || 'Ожидание'
+                                            : req.status === 'accepted'
+                                              ? t('requests.statusAccepted') || 'Принято'
+                                              : t('requests.statusRejected') || 'Отклонено'}
+                                        </Badge>
+                                      </Table.Cell>
+                                      <Table.Cell fontSize="sm" color="gray.600">
+                                        {req.response || '-'}
+                                      </Table.Cell>
+                                      <Table.Cell fontSize="xs" color="gray.400">
+                                        {formatDate(req.createdAt)}
+                                      </Table.Cell>
+                                      <Table.Cell>
+                                        <Button
+                                          size="xs"
+                                          variant="outline"
+                                          colorPalette="red"
+                                          onClick={() => handleDeleteRequest(req._id || req.id || '')}
+                                          gap={2}
+                                        >
+                                          <FiTrash2 />
+                                          <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
+                                        </Button>
+                                      </Table.Cell>
+                                    </Table.Row>
+                                  ))}
+                                </Table.Body>
+                              </Table.Root>
+                            </Box>
+                          </Box>
+                        ))}
+                      </VStack>
                     ) : (
                       <Box p={8} textAlign="center" color="gray.500">
-                        <Text>Нет отправленных запросов</Text>
+                        <Text>{t('requests.sentEmpty') || 'Нет отправленных запросов'}</Text>
                       </Box>
                     )}
                   </VStack>
                 </VStack>
               </Tabs.Content>
 
-              {/* Received Requests Tab */}
               <Tabs.Content value="received">
                 <VStack gap={6} align="stretch">
-                  <Text fontWeight="semibold">Полученные запросы</Text>
+                  <Text fontWeight="semibold">{t('requests.receivedTitle') || 'Полученные запросы'}</Text>
 
                   {receivedRequests.length > 0 ? (
                     <Box overflowX="auto">
                       <Table.Root variant="line">
                         <Table.Header>
                           <Table.Row>
-                            <Table.ColumnHeader>От компании</Table.ColumnHeader>
-                            <Table.ColumnHeader>Текст</Table.ColumnHeader>
-                            <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                            <Table.ColumnHeader>Файлы</Table.ColumnHeader>
-                            <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                            <Table.ColumnHeader>Действия</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableFromCompany') || 'От компании'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
+                            <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
                           </Table.Row>
                         </Table.Header>
                         <Table.Body>
-                          {receivedRequests.map((req: any) => (
-                            <Table.Row key={req._id}>
+                          {receivedRequests.map((req: RequestModel) => (
+                            <Table.Row key={req._id || req.id}>
                               <Table.Cell fontWeight="medium">{getCompanyName(req.senderCompanyId)}</Table.Cell>
                               <Table.Cell fontSize="sm" color="gray.600">
-                                {req.text.substring(0, 40)}...
+                                {req.text}
                               </Table.Cell>
+                              <Table.Cell>{renderFileList(req.files)}</Table.Cell>
                               <Table.Cell>
-                                <Badge colorPalette={req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'}>
-                                  {req.status === 'pending' ? 'Ожидание' : req.status === 'accepted' ? 'Принято' : 'Отклонено'}
-                                </Badge>
-                              </Table.Cell>
-                              <Table.Cell>
-                                <Badge colorPalette="blue">
-                                  {req.files?.length || 0}
+                                <Badge
+                                  colorPalette={
+                                    req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
+                                  }
+                                >
+                                  {req.status === 'pending'
+                                    ? t('requests.statusPending') || 'Ожидание'
+                                    : req.status === 'accepted'
+                                      ? t('requests.statusAccepted') || 'Принято'
+                                      : t('requests.statusRejected') || 'Отклонено'}
                                 </Badge>
                               </Table.Cell>
                               <Table.Cell fontSize="xs" color="gray.400">
-                                {new Date(req.createdAt).toLocaleDateString('ru-RU')}
+                                {formatDate(req.createdAt)}
                               </Table.Cell>
                               <Table.Cell>
-                                {req.status === 'pending' ? (
-                                  <Button
-                                    size="xs"
-                                    colorPalette="brand"
-                                    onClick={() => setRespondingTo(req._id)}
-                                  >
-                                    Ответить
-                                  </Button>
-                                ) : (
-                                  <Button
-                                    size="xs"
-                                    variant="outline"
-                                    onClick={() => setRespondingTo(req._id)}
-                                  >
-                                    <FiEye />
-                                  </Button>
-                                )}
+                                <Button
+                                  size="xs"
+                                  variant={req.status === 'pending' ? 'solid' : 'outline'}
+                                  colorPalette="brand"
+                                  onClick={() => setRespondingTo(req._id || req.id || '')}
+                                  gap={2}
+                                >
+                                  {req.status === 'pending' ? (
+                                    <>
+                                      <FiSend />
+                                      <Text>{t('requests.respond') || 'Ответить'}</Text>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FiEye />
+                                      <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
+                                    </>
+                                  )}
+                                </Button>
                               </Table.Cell>
                             </Table.Row>
                           ))}
@@ -323,73 +833,103 @@ const RequestsPage = () => {
                     </Box>
                   ) : (
                     <Box p={8} textAlign="center" color="gray.500">
-                      <Text>Нет полученных запросов</Text>
+                      <Text>{t('requests.receivedEmpty') || 'Нет полученных запросов'}</Text>
                     </Box>
                   )}
                 </VStack>
               </Tabs.Content>
 
-              {/* Responses Tab */}
               <Tabs.Content value="responses">
                 <VStack gap={6} align="stretch">
                   <HStack justify="space-between">
-                    <Text fontWeight="semibold">Ответы на отправленные запросы</Text>
+                    <Text fontWeight="semibold">{t('requests.responsesTitle') || 'Ответы на отправленные запросы'}</Text>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        const responses = sentRequests.filter(r => r.response)
-                        const data = responses.map(r => ({
-                          'Компания': getCompanyName(r.recipientCompanyId),
-                          'Статус': r.status === 'pending' ? 'Ожидание' : r.status === 'accepted' ? 'Принято' : 'Отклонено',
-                          'Ответ': r.response || '-',
-                          'Дата ответа': r.respondedAt ? new Date(r.respondedAt).toLocaleDateString('ru-RU') : '-'
+                        const responses = sentRequests.filter((r: RequestModel) => r.response)
+                        const data = responses.map((r) => ({
+                          [t('requests.tableCompany') || 'Компания']: getCompanyName(r.recipientCompanyId),
+                          [t('requests.tableStatus') || 'Статус']:
+                            r.status === 'pending'
+                              ? t('requests.statusPending') || 'Ожидание'
+                              : r.status === 'accepted'
+                                ? t('requests.statusAccepted') || 'Принято'
+                                : t('requests.statusRejected') || 'Отклонено',
+                          [t('requests.tableResponse') || 'Ответ']: r.response || '-',
+                          [t('requests.tableResponseDate') || 'Дата ответа']: r.respondedAt
+                            ? formatDate(r.respondedAt)
+                            : '-',
                         }))
-                        const ws = XLSX.utils.json_to_sheet(data)
-                        const wb = XLSX.utils.book_new()
-                        XLSX.utils.book_append_sheet(wb, ws, 'Ответы')
-                        XLSX.writeFile(wb, 'responses.xlsx')
+                        const worksheet = XLSX.utils.json_to_sheet(data)
+                        const workbook = XLSX.utils.book_new()
+                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Ответы')
+                        XLSX.writeFile(workbook, 'responses.xlsx')
                       }}
+                      gap={2}
                     >
                       <FiDownload />
-                      Экспортировать в XLSX
+                      <Text>{t('requests.exportXlsx') || 'Экспортировать в XLSX'}</Text>
                     </Button>
                   </HStack>
 
-                  {sentRequests.filter(r => r.response).length > 0 ? (
-                    <Box overflowX="auto">
-                      <Table.Root variant="line">
-                        <Table.Header>
-                          <Table.Row>
-                            <Table.ColumnHeader>От компании</Table.ColumnHeader>
-                            <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                            <Table.ColumnHeader>Ответ</Table.ColumnHeader>
-                            <Table.ColumnHeader>Дата ответа</Table.ColumnHeader>
-                          </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                          {sentRequests.filter(r => r.response).map((req: any) => (
-                            <Table.Row key={req._id}>
-                              <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
-                              <Table.Cell>
-                                <Badge colorPalette={req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'}>
-                                  {req.status === 'pending' ? 'Ожидание' : req.status === 'accepted' ? 'Принято' : 'Отклонено'}
-                                </Badge>
-                              </Table.Cell>
-                              <Table.Cell fontSize="sm" color="gray.600">
-                                {req.response?.substring(0, 80)}...
-                              </Table.Cell>
-                              <Table.Cell fontSize="xs" color="gray.400">
-                                {req.respondedAt ? new Date(req.respondedAt).toLocaleDateString('ru-RU') : '-'}
-                              </Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Root>
-                    </Box>
+                  {groupedResponses.length > 0 ? (
+                    <VStack align="stretch" gap={4}>
+                      {groupedResponses.map(([groupSubject, requests]) => (
+                        <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={4} bg="white">
+                          <Heading size="sm" mb={3}>
+                            {groupSubject}
+                          </Heading>
+                          <Box overflowX="auto">
+                            <Table.Root variant="line">
+                              <Table.Header>
+                                <Table.Row>
+                                  <Table.ColumnHeader>{t('requests.tableCompany') || 'Компания'}</Table.ColumnHeader>
+                                  <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                                  <Table.ColumnHeader>{t('requests.tableResponse') || 'Ответ'}</Table.ColumnHeader>
+                                  <Table.ColumnHeader>{t('requests.tableResponseFiles') || 'Файлы ответа'}</Table.ColumnHeader>
+                                  <Table.ColumnHeader>{t('requests.tableResponseDate') || 'Дата ответа'}</Table.ColumnHeader>
+                                </Table.Row>
+                              </Table.Header>
+                              <Table.Body>
+                                {requests.map((req) => (
+                                  <Table.Row key={req._id || req.id}>
+                                    <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
+                                    <Table.Cell>
+                                      <Badge
+                                        colorPalette={
+                                          req.status === 'accepted'
+                                            ? 'green'
+                                            : req.status === 'rejected'
+                                              ? 'red'
+                                              : 'yellow'
+                                        }
+                                      >
+                                        {req.status === 'pending'
+                                          ? t('requests.statusPending') || 'Ожидание'
+                                          : req.status === 'accepted'
+                                            ? t('requests.statusAccepted') || 'Принято'
+                                            : t('requests.statusRejected') || 'Отклонено'}
+                                      </Badge>
+                                    </Table.Cell>
+                                    <Table.Cell fontSize="sm" color="gray.600">
+                                      {req.response}
+                                    </Table.Cell>
+                                    <Table.Cell>{renderFileList(req.responseFiles)}</Table.Cell>
+                                    <Table.Cell fontSize="xs" color="gray.400">
+                                      {formatDate(req.respondedAt)}
+                                    </Table.Cell>
+                                  </Table.Row>
+                                ))}
+                              </Table.Body>
+                            </Table.Root>
+                          </Box>
+                        </Box>
+                      ))}
+                    </VStack>
                   ) : (
                     <Box p={8} textAlign="center" color="gray.500">
-                      <Text>Нет ответов на запросы</Text>
+                      <Text>{t('requests.responsesEmpty') || 'Нет ответов на запросы'}</Text>
                     </Box>
                   )}
                 </VStack>
@@ -399,7 +939,6 @@ const RequestsPage = () => {
         </VStack>
       </Container>
 
-      {/* Response Dialog */}
       <Dialog.Root
         open={!!respondingTo}
         onOpenChange={(details) => {
@@ -407,6 +946,10 @@ const RequestsPage = () => {
             setRespondingTo(null)
             setResponseText('')
             setResponseStatus('accepted')
+            setResponseFiles([])
+            if (responseFileInputRef.current) {
+              responseFileInputRef.current.value = ''
+            }
           }
         }}
         size="lg"
@@ -415,33 +958,73 @@ const RequestsPage = () => {
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>Ответить на запрос</Dialog.Title>
+              <Dialog.Title>{t('requests.respondDialogTitle') || 'Ответить на запрос'}</Dialog.Title>
               <Dialog.CloseTrigger />
             </Dialog.Header>
             <Dialog.Body>
               <VStack gap={4}>
                 <Field.Root>
-                  <Field.Label>Статус</Field.Label>
+                  <Field.Label>{t('requests.statusLabel') || 'Статус'}</Field.Label>
                   <NativeSelect.Root size="sm">
                     <NativeSelect.Field
                       value={responseStatus}
-                      onChange={(e) => setResponseStatus(e.target.value as 'accepted' | 'rejected')}
+                      onChange={(event) => setResponseStatus(event.target.value as 'accepted' | 'rejected')}
                     >
-                      <option value="accepted">Принять</option>
-                      <option value="rejected">Отклонить</option>
+                      <option value="accepted">{t('requests.statusAccepted') || 'Принять'}</option>
+                      <option value="rejected">{t('requests.statusRejected') || 'Отклонить'}</option>
                     </NativeSelect.Field>
                     <NativeSelect.Indicator />
                   </NativeSelect.Root>
                 </Field.Root>
 
                 <Field.Root required>
-                  <Field.Label>Текст ответа</Field.Label>
+                  <Field.Label>{t('requests.responseText') || 'Текст ответа'}</Field.Label>
                   <Textarea
                     value={responseText}
-                    onChange={(e) => setResponseText(e.target.value)}
-                    placeholder="Введите ответ на запрос"
+                    onChange={(event) => setResponseText(event.target.value)}
+                    placeholder={t('requests.responsePlaceholder') || 'Введите ответ на запрос'}
                     minH="100px"
                   />
+                </Field.Root>
+
+                <Field.Root>
+                  <Field.Label>{t('requests.responseFiles') || 'Вложения к ответу'}</Field.Label>
+                  <Input
+                    ref={responseFileInputRef}
+                    type="file"
+                    onChange={handleResponseFileSelect}
+                    multiple
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                  />
+                  {responseFiles.length > 0 && (
+                    <VStack gap={2} mt={2} align="start">
+                      {responseFiles.map((file, index) => (
+                        <HStack key={`${file.name}-${index}`} gap={2} fontSize="sm" color="gray.600">
+                          <FiFileText />
+                          <Text>{file.name}</Text>
+                          <Text color="gray.400">({(file.size / 1024).toFixed(1)} KB)</Text>
+                          <IconButton
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            aria-label={t('requests.removeFile') || 'Удалить файл'}
+                            onClick={() => handleRemoveResponseFile(index)}
+                          >
+                            <FiTrash2 />
+                          </IconButton>
+                        </HStack>
+                      ))}
+                    </VStack>
+                  )}
+
+                  {respondingRequest?.responseFiles?.length ? (
+                    <Box mt={3}>
+                      <Text fontSize="xs" color="gray.500" mb={1}>
+                        {t('requests.responseExistingFiles') || 'Полученные ранее файлы:'}
+                      </Text>
+                      {renderFileList(respondingRequest.responseFiles)}
+                    </Box>
+                  ) : null}
                 </Field.Root>
               </VStack>
             </Dialog.Body>
@@ -452,15 +1035,22 @@ const RequestsPage = () => {
                   setRespondingTo(null)
                   setResponseText('')
                   setResponseStatus('accepted')
+                  setResponseFiles([])
+                  if (responseFileInputRef.current) {
+                    responseFileInputRef.current.value = ''
+                  }
                 }}
               >
-                Отмена
+                {t('common:buttons.cancel') || 'Отмена'}
               </Button>
               <Button
                 colorPalette="brand"
                 onClick={() => respondingTo && handleRespondToRequest(respondingTo)}
+                loading={isSendingResponse}
+                gap={2}
               >
-                Отправить ответ
+                <FiSend />
+                <Text>{t('requests.responseSubmit') || 'Отправить ответ'}</Text>
               </Button>
             </Dialog.Footer>
           </Dialog.Content>
@@ -471,3 +1061,4 @@ const RequestsPage = () => {
 }
 
 export { RequestsPage }
+

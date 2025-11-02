@@ -61,7 +61,7 @@ router.post('/', verifyToken, async (req, res) => {
     // Создать новый отзыв
     const newReview = new Review({
       companyId,
-      authorCompanyId: req.user.companyId,
+      authorCompanyId: req.companyId,
       authorName: req.user.firstName + ' ' + req.user.lastName,
       authorCompany: req.user.companyName || 'Company',
       rating: parseInt(rating),
