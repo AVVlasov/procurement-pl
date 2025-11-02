@@ -107,10 +107,6 @@ export const SearchPage = () => {
     })
   }
 
-  const handleApplyFilters = useCallback(() => {
-    refetch()
-  }, [refetch])
-
   const handleContact = (companyId: string, companyName?: string) => {
     setSelectedCompanyId(companyId)
     setSelectedCompanyName(companyName || companyId)
@@ -195,7 +191,6 @@ export const SearchPage = () => {
                   filters={filters}
                   onChange={handleFiltersChange}
                   onReset={handleResetFilters}
-                  onApply={handleApplyFilters}
                 />
               </Box>
             </GridItem>

@@ -21,10 +21,9 @@ interface FiltersPanelProps {
   filters: SearchParams
   onChange: (filters: SearchParams) => void
   onReset: () => void
-  onApply?: () => void
 }
 
-export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPanelProps) => {
+export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) => {
   const { t } = useTranslation('search')
   const bg = colors.bg.primary
   const borderColor = colors.border.primary
@@ -114,17 +113,6 @@ export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPan
             >
               {t('filters.reset')}
             </Button>
-            {onApply && (
-              <Button
-                size="sm"
-                colorPalette="brand"
-                variant="solid"
-                onClick={onApply}
-                disabled={!hasSelectedFilters}
-              >
-                {t('filters.apply')}
-              </Button>
-            )}
           </HStack>
         </HStack>
 
@@ -272,18 +260,6 @@ export const FiltersPanel = ({ filters, onChange, onReset, onApply }: FiltersPan
             </HStack>
           </VStack>
         </FilterSection>
-        {onApply && (
-          <Button
-            mt={2}
-            size="md"
-            colorPalette="brand"
-            display={{ base: 'flex', md: 'none' }}
-            onClick={onApply}
-            disabled={!hasSelectedFilters}
-          >
-            {t('filters.apply')}
-          </Button>
-        )}
       </VStack>
     </Box>
   )
