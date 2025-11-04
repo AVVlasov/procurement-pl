@@ -21,21 +21,23 @@ router.get('/aggregates', verifyToken, async (req, res) => {
 
     const companyId = user.companyId.toString();
 
-    const [docsCount, acceptsCount, requestsCount] = await Promise.all([
-      BuyProduct.countDocuments({ companyId }),
-      Request.countDocuments({ 
-        $or: [
-          { senderCompanyId: companyId, status: 'accepted' },
-          { recipientCompanyId: companyId, status: 'accepted' }
-        ]
-      }),
-      Request.countDocuments({
-        $or: [
-          { senderCompanyId: companyId },
-          { recipientCompanyId: companyId }
-        ]
-      })
-    ]);
+    // Получить все BuyProduct для подсчета файлов и акцептов
+    const buyProducts = await BuyProduct.find({ companyId });
+
+    // Подсчет документов - сумма всех файлов во всех BuyProduct
+    const docsCount = buyProducts.reduce((total, product) => {
+      return total + (product.files ? product.files.length : 0);
+    }, 0);
+
+    // Подсчет акцептов - сумма всех acceptedBy во всех BuyProduct
+    const acceptsCount = buyProducts.reduce((total, product) => {
+      return total + (product.acceptedBy ? product.acceptedBy.length : 0);
+    }, 0);
+
+    // Подсчет исходящих запросов (только отправленные этой компанией)
+    const requestsCount = await Request.countDocuments({
+      senderCompanyId: companyId
+    });
 
     res.json({
       docsCount,

@@ -28,6 +28,7 @@ import {
 import { MainLayout } from '../../components/layout/MainLayout'
 import { StatCard } from '../../components/dashboard/StatCard'
 import { AIRecommendations } from '../../components/dashboard/AIRecommendations'
+import { RecentActivity } from '../../components/dashboard/RecentActivity'
 import { useAuth } from '../../hooks/useAuth'
 import { useGetCompanyStatsQuery } from '../../__data__/api/companiesApi'
 import { useGetHomeAggregatesQuery } from '../../__data__/api/homeApi'
@@ -216,7 +217,17 @@ export const DashboardPage = () => {
             <Box borderWidth="1px" borderRadius="md" p={4}>
               <HStack justify="space-between">
                 <Heading size="sm">{t('home.buy.title', 'Я покупаю')}</Heading>
-                <Button size="sm" onClick={() => navigate('/requests')}>{t('home.view', 'Перейти')}</Button>
+                <Button 
+                  size="sm" 
+                  colorPalette="blue"
+                  onClick={() => {
+                    const url = new URL(window.location.origin + window.location.pathname.replace(/\/$/, '') + '/company/profile');
+                    url.searchParams.set('tab', 'buy');
+                    navigate('/company/profile?tab=buy');
+                  }}
+                >
+                  {t('home.view', 'Перейти')}
+                </Button>
               </HStack>
               <HStack mt={3} gap={6}>
                 <VStack align="start" gap={0}>
@@ -232,7 +243,13 @@ export const DashboardPage = () => {
             <Box borderWidth="1px" borderRadius="md" p={4}>
               <HStack justify="space-between">
                 <Heading size="sm">{t('home.sell.title', 'Я продаю')}</Heading>
-                <Button size="sm" onClick={() => navigate('/search')}>{t('home.view', 'Перейти')}</Button>
+                <Button 
+                  size="sm" 
+                  colorPalette="green"
+                  onClick={() => navigate('/company/profile?tab=specialization')}
+                >
+                  {t('home.view', 'Перейти')}
+                </Button>
               </HStack>
               <VStack align="start" gap={0} mt={3}>
                 <Text fontSize="xs" color="gray.500">{t('home.stats.requests', 'Исходящие запросы')}</Text>
@@ -243,26 +260,12 @@ export const DashboardPage = () => {
         </Box>
 
         {/* Recent Activity */}
-        <Box
-          bg={colors.bg.primary}
-          p={{ base: 4, md: 6 }}
-          borderRadius="lg"
-          shadow="sm"
-          borderWidth="1px"
-          borderColor={colors.border.primary}
-        >
-          <Heading size={{ base: 'sm', md: 'md' }} mb={4}>
+        <VStack gap={4} align="stretch">
+          <Heading size={{ base: 'sm', md: 'md' }}>
             {t('recent_activity.title')}
           </Heading>
-          <Text 
-            color="gray.500" 
-            textAlign="center" 
-            py={{ base: 6, md: 8 }}
-            fontSize={{ base: 'sm', md: 'md' }}
-          >
-            {t('recent_activity.no_activity')}
-          </Text>
-        </Box>
+          <RecentActivity />
+        </VStack>
       </VStack>
 
       {/* Create Request Dialog */}

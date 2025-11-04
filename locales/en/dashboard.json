@@ -18,7 +18,8 @@
   },
   "recent_activity": {
     "title": "Recent Activity",
-    "no_activity": "No activity"
+    "no_activity": "No activity",
+    "loading": "Loading activity..."
   },
   "quick_actions": {
     "title": "Quick Actions",

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <style>body {margin: 0; padding: 0;}</style>
+  <title></title>
+</head>
+
+<body>
+  <div id="app"></div>
+  <script src="https://static.brojs.ru/fire.app/1.8.4/index.js"></script>
+  <script>
+      fireapp({
+          apps: {
+      "journal": {
+          "version": "4.7.10",
+          "name": "journal.pl"
+      },
+      "lessons-platform": {
+          "version": "master",
+          "name": "lessons-platform"
+      },
+      "exam": {
+          "version": "2.4.2",
+          "name": "exam"
+      },
+      "i18next-overrides": {
+          "version": "master",
+          "name": "i18next-overrides"
+      },
+      "content": {
+          "version": "vibe",
+          "name": "content"
+      },
+      "telegram": {
+          "version": "master",
+          "name": "telegram"
+      },
+      "bro-gamma": {
+          "version": "2.5.0",
+          "name": "bro-gamma"
+      },
+      "pickme": {
+          "version": "1.1.1",
+          "name": "pickme"
+      },
+      "procurement-pl": {
+          "version": "master",
+          "name": "procurement-pl"
+      }
+  },
+          navigations: {
+      "lessons-platform.main": "/lessons-platform",
+      "exam.main": "/exam",
+      "link.exam.details": "/details/:courseId/:examId",
+      "link.exam.jury-details": "/jury-uniq-uri/dashboard/:juryId/:courseId/:examId",
+      "link.exam.controllers": "/controllers/check/:examId/guest-block/:courseId",
+      "link.i18next-overrides.main": "/i18next-overrides",
+      "telegram.main": "/telegram",
+      "content.main": "/content",
+      "link.content.create.app": "/create",
+      "link.content.app.details": "/app/:appId",
+      "link.content.app.videos": "/app/:appId/videos",
+      "link.content.app.videos.folder": "/app/:appId/videos/folder/:folderId",
+      "pickme.main": "/pickme",
+      "link.pickme.pickme-admin": "/admin/:courseId/:examId",
+      "link.pickme.pickme-vote": "/vote/:courseId/:examId/:accessCode",
+      "link.pickme.pickme-stats": "/stats/:courseId/:examId",
+      "bro-gamma.main": "/bro-gamma",
+      "link.bro-gamma.create": "/create",
+      "link.bro-gamma.play": "play",
+      "journal.main": "/journal",
+      "link.journal.attendance": "/attendance/:courseId",
+      "link.journal.team.list": "/team/:courseId",
+      "link.journal.team.details": "/team/:courseId/:teamId",
+      "link.journal.task.create": "/task/create/:courseId/:lessonId",
+      "link.journal.task.details": "/task/:taskId",
+      "link.journal.courses": "/courses",
+      "link.journal.tasks.overview": "/tasks/:courseId",
+      "procurement-pl.main": "/procurement-pl",
+      "link.procurement-pl.auth.login": "/auth/login",
+      "link.procurement-pl.auth.register": "/auth/register",
+      "link.procurement-pl.dashboard": "/dashboard",
+      "link.procurement-pl.company": "/company/:id",
+      "link.procurement-pl.search": "/search"
+  },
+          config: {
+      "fireappVersion": "1.8.4",
+      "baseUrl": "https://static.brojs.ru",
+      "multystub": "/multystub",
+      "ms": "/ms",
+      "content.api": "/content-bh",
+      "bro-gamma.api": "/jrnl-bh/api/presentation",
+      "journal.back.url": "/jrnl-bh/api",
+      "journal.polling-interval": "4000",
+      "procurement-pl.api": "/ms/procurement"
+  },
+          features: {
+      "journal": {
+          "lesson.bar": {
+              "on": true,
+              "value": "true",
+              "key": "lesson.bar"
+          },
+          "group.by.date": {
+              "on": true,
+              "value": "true",
+              "key": "group.by.date"
+          },
+          "courceNameSuggestion": {
+              "on": true,
+              "value": "true",
+              "key": "courceNameSuggestion"
+          }
+      },
+      "lessons-platform": {},
+      "exam": {
+          "juryPolling": {
+              "on": true,
+              "value": "1000",
+              "key": "juryPolling"
+          },
+          "juryNames": {
+              "on": true,
+              "value": "true",
+              "key": "juryNames"
+          }
+      },
+      "i18next-overrides": {},
+      "content": {},
+      "telegram": {
+          "ids": {
+              "on": true,
+              "value": "192729792,310896440",
+              "key": "ids"
+          },
+          "LOG_LEVEL": {
+              "on": true,
+              "value": "debug",
+              "key": "LOG_LEVEL"
+          },
+          "voiceAnswer": {
+              "on": true,
+              "value": "true",
+              "key": "voiceAnswer"
+          }
+      },
+      "bro-gamma": {
+          "max-slides": {
+              "on": true,
+              "value": "10",
+              "key": "max-slides"
+          },
+          "off": {
+              "on": true,
+              "value": "true",
+              "key": "off"
+          }
+      },
+      "pickme": {},
+      "procurement-pl": {}
+  }
+      })
+  </script></body>
+
+</html>

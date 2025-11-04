@@ -86,6 +86,7 @@ export const SmartSearchBar = ({ onSearch, isLoading, allowEmptySearch = false, 
                   variant="ghost"
                   onClick={() => {
                     setQuery('')
+                    onSearch('', false) // Очищаем поиск на сервере тоже
                   }}
                 >
                   <FiX />

@@ -210,6 +210,33 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
     }
   }
 
+  const handleDownloadFile = async (productId: string, fileId: string, fileName: string) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`/api/buy-products/download/${productId}/${fileId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download file')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      toast.error('Ошибка при скачивании файла')
+    }
+  }
+
   const isProductAccepted = (product: any) => {
     return product.acceptedBy?.some((a: any) => {
       const compId = typeof a.companyId === 'string' ? a.companyId : a.companyId?._id
@@ -263,20 +290,29 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
                     {product.files && product.files.length > 0 ? (
                       <VStack align="start" gap={2} maxW="240px">
                         {product.files.map((file: any) => (
-                          <HStack key={file.id} gap={2} align="center">
-                            <Button
-                              as="a"
-                              href={file.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              size="sm"
-                              variant="link"
-                              colorPalette="brand"
+                          <HStack key={file.id} gap={2} align="center" maxW="100%">
+                            <Box
+                              onClick={() => handleDownloadFile(product._id, file.id, file.name)}
+                              display="flex"
+                              alignItems="center"
                               gap={1}
+                              maxW="180px"
+                              color="brand.500"
+                              textDecoration="none"
+                              fontSize="sm"
+                              _hover={{ textDecoration: 'underline', color: 'brand.600' }}
+                              cursor="pointer"
                             >
-                              <FiDownload />
-                              <Text>{file.name}</Text>
-                            </Button>
+                              <FiDownload style={{ flexShrink: 0 }} />
+                              <Text
+                                overflow="hidden"
+                                textOverflow="ellipsis"
+                                whiteSpace="nowrap"
+                                title={file.name}
+                              >
+                                {file.name}
+                              </Text>
+                            </Box>
                             {isEditingOwn && (
                               <IconButton
                                 size="xs"

@@ -14,6 +14,7 @@ export interface SearchParams {
   type?: 'sell' | 'buy';
   page?: number;
   limit?: number;
+  offset?: number; // Точный offset для пагинации со смешанными размерами страниц
   sortBy?: 'relevance' | 'rating' | 'name';
   sortOrder?: 'asc' | 'desc';
 }
@@ -41,8 +42,8 @@ export interface AISearchRequest {
   };
 }
 
-// Custom params serializer to handle arrays and booleans properly
-const serializeParams = (params: Record<string, any>): string => {
+// Helper function to build query string with proper array handling
+const buildQueryString = (params: Record<string, any>): string => {
   const searchParams = new URLSearchParams()
   
   for (const [key, value] of Object.entries(params)) {
@@ -73,7 +74,6 @@ export const searchApi = createApi({
   reducerPath: 'searchApi',
   baseQuery: fetchBaseQuery({ 
     baseUrl: `${URLs.apiUrl}/search`,
-    paramsSerializer: serializeParams,
     prepareHeaders: (headers, { getState }) => {
       const state = getState() as RootState | undefined
       const token = state?.auth?.accessToken
@@ -88,9 +88,10 @@ export const searchApi = createApi({
     searchCompanies: builder.query<SearchResult, SearchParams>({
       query: (params) => {
         console.log('[searchApi] searchCompanies params:', params)
+        const queryString = buildQueryString(params)
+        console.log('[searchApi] Query string:', queryString)
         return {
-          url: '',
-          params,
+          url: queryString ? `?${queryString}` : '',
         }
       },
       providesTags: ['Search'],

@@ -5,12 +5,12 @@ import {
   HStack,
   Heading,
   Button,
-  Checkbox,
   Slider,
   Text,
-  Switch,
   useDisclosure,
 } from '@chakra-ui/react'
+import { Checkbox } from '../ui/checkbox'
+import { Switch } from '../ui/switch'
 import { useTranslation } from 'react-i18next'
 import { FiChevronDown, FiChevronUp } from 'react-icons/fi'
 import { INDUSTRIES, COMPANY_SIZES, GEOGRAPHY_OPTIONS } from '../../utils/constants'
@@ -122,10 +122,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             {INDUSTRIES.slice(0, 8).map((industry) => {
               const isChecked = (filters.industries || []).includes(industry.value)
               return (
-                <Checkbox.Root 
+                <Checkbox
                   key={industry.value} 
                   checked={isChecked}
-                  onCheckedChange={(details) => {
+                  onCheckedChange={(e) => {
                     handleCheckboxChange(
                       filters.industries || [],
                       industry.value,
@@ -135,11 +135,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   _hover={{ bg: 'gray.50' }}
                   p={1}
                   borderRadius="md"
+                  cursor="pointer"
                 >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label cursor="pointer">{industry.label}</Checkbox.Label>
-                </Checkbox.Root>
+                  {industry.label}
+                </Checkbox>
               )
             })}
           </VStack>
@@ -151,10 +150,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             {COMPANY_SIZES.map((size) => {
               const isChecked = (filters.companySize || []).includes(size.value)
               return (
-                <Checkbox.Root 
+                <Checkbox
                   key={size.value} 
                   checked={isChecked}
-                  onCheckedChange={(details) => {
+                  onCheckedChange={(e) => {
                     handleCheckboxChange(
                       filters.companySize || [],
                       size.value,
@@ -164,11 +163,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   _hover={{ bg: 'gray.50' }}
                   p={1}
                   borderRadius="md"
+                  cursor="pointer"
                 >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label cursor="pointer">{size.label}</Checkbox.Label>
-                </Checkbox.Root>
+                  {size.label}
+                </Checkbox>
               )
             })}
           </VStack>
@@ -180,10 +178,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
             {GEOGRAPHY_OPTIONS.slice(0, 8).map((geo) => {
               const isChecked = (filters.geography || []).includes(geo.value)
               return (
-                <Checkbox.Root 
+                <Checkbox
                   key={geo.value} 
                   checked={isChecked}
-                  onCheckedChange={(details) => {
+                  onCheckedChange={(e) => {
                     handleCheckboxChange(
                       filters.geography || [],
                       geo.value,
@@ -193,11 +191,10 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
                   _hover={{ bg: 'gray.50' }}
                   p={1}
                   borderRadius="md"
+                  cursor="pointer"
                 >
-                  <Checkbox.HiddenInput />
-                  <Checkbox.Control />
-                  <Checkbox.Label cursor="pointer">{geo.label}</Checkbox.Label>
-                </Checkbox.Root>
+                  {geo.label}
+                </Checkbox>
               )
             })}
           </VStack>
@@ -232,31 +229,21 @@ export const FiltersPanel = ({ filters, onChange, onReset }: FiltersPanelProps) 
           <VStack gap={3} align="stretch">
             <HStack justify="space-between">
               <Text>{t('filters.has_reviews') || 'Есть отзывы'}</Text>
-              <Switch.Root
+              <Switch
                 checked={Boolean(filters.hasReviews)}
-                onCheckedChange={(details) => {
-                  handleFilterChange({ ...filters, hasReviews: details.checked })
+                onCheckedChange={(e) => {
+                  handleFilterChange({ ...filters, hasReviews: e.checked })
                 }}
-              >
-                <Switch.HiddenInput />
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-              </Switch.Root>
+              />
             </HStack>
             <HStack justify="space-between">
               <Text>{t('filters.has_accepted_docs') || 'С акцептами документации'}</Text>
-              <Switch.Root
+              <Switch
                 checked={Boolean(filters.hasAcceptedDocs)}
-                onCheckedChange={(details) => {
-                  handleFilterChange({ ...filters, hasAcceptedDocs: details.checked })
+                onCheckedChange={(e) => {
+                  handleFilterChange({ ...filters, hasAcceptedDocs: e.checked })
                 }}
-              >
-                <Switch.HiddenInput />
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-              </Switch.Root>
+              />
             </HStack>
           </VStack>
         </FilterSection>

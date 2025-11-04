@@ -21,9 +21,11 @@ interface ResultsGridProps {
   isLoading: boolean
   filters: SearchParams
   onFiltersChange: (filters: SearchParams) => void
-  onContact: (companyId: string, companyName?: string) => void
   onToggleFavorite: (companyId: string) => void
   favoriteIds?: string[]
+  onLoadMore?: () => void
+  hasMore?: boolean
+  showLoadMore?: boolean
 }
 
 export const ResultsGrid = ({
@@ -32,9 +34,11 @@ export const ResultsGrid = ({
   isLoading,
   filters,
   onFiltersChange,
-  onContact,
   onToggleFavorite,
   favoriteIds = [],
+  onLoadMore,
+  hasMore = false,
+  showLoadMore = false,
 }: ResultsGridProps) => {
   const { t } = useTranslation('search')
 
@@ -126,26 +130,24 @@ export const ResultsGrid = ({
           <CompanyCard
             key={company.id}
             company={company}
-            onContact={onContact}
             onToggleFavorite={onToggleFavorite}
             isFavorite={favoriteIds.includes(company.id)}
           />
         ))}
       </Box>
 
-      {/* Pagination placeholder */}
-      {total > (filters.limit || 10) && (
-        <HStack justify="center" gap={2}>
-          <Button size="sm" variant="outline">
-            Previous
+      {/* Load More Button */}
+      {showLoadMore && hasMore && (
+        <Flex justify="center" mt={4}>
+          <Button 
+            colorPalette="brand"
+            onClick={onLoadMore}
+            disabled={isLoading}
+            loading={isLoading}
+          >
+            {t('results.load_more')}
           </Button>
-          <Text fontSize="sm">
-            Page {filters.page || 1} of {Math.ceil(total / (filters.limit || 10))}
-          </Text>
-          <Button size="sm" variant="outline">
-            Next
-          </Button>
-        </HStack>
+        </Flex>
       )}
     </VStack>
   )

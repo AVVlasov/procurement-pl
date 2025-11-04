@@ -32,11 +32,12 @@ const storage = multer.diskStorage({
     cb(null, productDir);
   },
   filename: (req, file, cb) => {
-    const originalExtension = path.extname(file.originalname) || '';
+    // Исправляем кодировку имени файла из Latin1 в UTF-8
+    const fixedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+    const originalExtension = path.extname(fixedName) || '';
     const baseName = path
-      .basename(file.originalname, originalExtension)
-      .replace(/[^a-zA-Z0-9-_]+/g, '_')
-      .toLowerCase();
+      .basename(fixedName, originalExtension)
+      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_'); // Убираем только недопустимые символы Windows, оставляем кириллицу
     cb(null, `${Date.now()}_${baseName}${originalExtension}`);
   },
 });
@@ -231,7 +232,16 @@ router.post('/:id/files', verifyToken, handleSingleFileUpload, async (req, res) 
     }
 
     // Только владелец товара может добавить файл
-    if (product.companyId.toString() !== req.companyId.toString()) {
+    const productCompanyId = product.companyId?.toString() || product.companyId;
+    const requestCompanyId = req.companyId?.toString() || req.companyId;
+    
+    console.log('[BuyProducts] Comparing company IDs:', {
+      productCompanyId,
+      requestCompanyId,
+      match: productCompanyId === requestCompanyId
+    });
+    
+    if (productCompanyId !== requestCompanyId) {
       return res.status(403).json({ error: 'Not authorized' });
     }
 
@@ -243,28 +253,75 @@ router.post('/:id/files', verifyToken, handleSingleFileUpload, async (req, res) 
       return res.status(400).json({ error: 'File is required' });
     }
 
-    const relativePath = path.join('buy-products', id, req.file.filename).replace(/\\/g, '/');
+    // Исправляем кодировку имени файла из Latin1 в UTF-8
+    const fixedFileName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+    
+    // Извлекаем timestamp из имени файла, созданного multer (формат: {timestamp}_{name}.ext)
+    const fileTimestamp = req.file.filename.split('_')[0];
+    
+    // storagePath относительно UPLOADS_ROOT (который уже включает 'buy-products')
+    const relativePath = path.join(id, req.file.filename).replace(/\\/g, '/');
     const file = {
-      id: `file-${Date.now()}`,
-      name: req.file.originalname,
-      url: `/uploads/${relativePath}`,
+      id: `file-${fileTimestamp}`, // Используем тот же timestamp, что и в имени файла
+      name: fixedFileName,
+      url: `/uploads/buy-products/${relativePath}`,
       type: req.file.mimetype,
       size: req.file.size,
       uploadedAt: new Date(),
       storagePath: relativePath,
     };
 
-    product.files.push(file);
-    await product.save();
+    console.log('[BuyProducts] Adding file to product:', {
+      productId: id,
+      fileName: file.name,
+      fileSize: file.size,
+      filePath: relativePath
+    });
+    
+    console.log('[BuyProducts] File object:', JSON.stringify(file, null, 2));
+    
+    // Используем findByIdAndUpdate вместо save() для избежания проблем с валидацией
+    let updatedProduct;
+    try {
+      console.log('[BuyProducts] Calling findByIdAndUpdate with id:', id);
+      updatedProduct = await BuyProduct.findByIdAndUpdate(
+        id,
+        { 
+          $push: { files: file },
+          $set: { updatedAt: new Date() }
+        },
+        { new: true, runValidators: false }
+      );
+      console.log('[BuyProducts] findByIdAndUpdate completed');
+    } catch (updateError) {
+      console.error('[BuyProducts] findByIdAndUpdate error:', {
+        message: updateError.message,
+        name: updateError.name,
+        code: updateError.code
+      });
+      throw updateError;
+    }
+    
+    if (!updatedProduct) {
+      throw new Error('Failed to update product with file');
+    }
+    
+    console.log('[BuyProducts] File added successfully to product:', id);
 
     log('[BuyProducts] File added to product:', id, file.name);
 
-    res.json(product);
+    res.json(updatedProduct);
   } catch (error) {
     console.error('[BuyProducts] Error adding file:', error.message);
+    console.error('[BuyProducts] Error stack:', error.stack);
+    console.error('[BuyProducts] Error name:', error.name);
+    if (error.errors) {
+      console.error('[BuyProducts] Validation errors:', JSON.stringify(error.errors, null, 2));
+    }
     res.status(500).json({
       error: 'Internal server error',
       message: error.message,
+      details: error.errors || {},
     });
   }
 });
@@ -378,6 +435,67 @@ router.get('/:id/acceptances', verifyToken, async (req, res) => {
       error: 'Internal server error',
       message: error.message,
     });
+  }
+});
+
+// GET /buy-products/download/:id/:fileId - скачать файл
+router.get('/download/:id/:fileId', verifyToken, async (req, res) => {
+  try {
+    console.log('[BuyProducts] Download request received:', {
+      productId: req.params.id,
+      fileId: req.params.fileId,
+      userId: req.userId,
+      companyId: req.companyId,
+      headers: req.headers.authorization
+    });
+    
+    const { id, fileId } = req.params;
+    const product = await BuyProduct.findById(id);
+
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    const file = product.files.find((f) => f.id === fileId);
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Создаем абсолютный путь к файлу
+    const filePath = path.resolve(UPLOADS_ROOT, file.storagePath);
+    
+    console.log('[BuyProducts] Trying to download file:', {
+      fileId: file.id,
+      fileName: file.name,
+      storagePath: file.storagePath,
+      absolutePath: filePath,
+      exists: fs.existsSync(filePath)
+    });
+
+    // Проверяем существование файла
+    if (!fs.existsSync(filePath)) {
+      console.error('[BuyProducts] File not found on disk:', filePath);
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+
+    // Устанавливаем правильные заголовки для скачивания с поддержкой кириллицы
+    const encodedFileName = encodeURIComponent(file.name);
+    res.setHeader('Content-Type', file.type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
+    res.setHeader('Content-Length', file.size);
+
+    // Отправляем файл
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('[BuyProducts] Error sending file:', err.message);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Error downloading file' });
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[BuyProducts] Error downloading file:', error.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 

@@ -36,7 +36,8 @@
     "view_details": "Подробнее",
     "contact": "Связаться",
     "add_to_favorites": "В избранное",
-    "remove_from_favorites": "Удалить из избранного"
+    "remove_from_favorites": "Удалить из избранного",
+    "load_more": "Загрузить еще"
   },
   "saved_searches": {
     "title": "Сохраненные поиски",

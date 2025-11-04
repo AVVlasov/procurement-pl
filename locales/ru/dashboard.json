@@ -18,7 +18,8 @@
   },
   "recent_activity": {
     "title": "Последняя активность",
-    "no_activity": "Нет активности"
+    "no_activity": "Нет активности",
+    "loading": "Загрузка активности..."
   },
   "quick_actions": {
     "title": "Быстрые действия",

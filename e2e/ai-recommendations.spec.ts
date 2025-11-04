@@ -10,11 +10,11 @@ test.describe('AI Recommendations', () => {
     await page.fill('input[type="password"]', 'SecurePass123!')
 
     // Нажимаем кнопку входа
-    await page.click('button:has-text("Войти")')
+    await page.getByRole('button', { name: 'Войти' }).click()
 
     // Ждём загрузки дашборда
-    await page.waitForURL('**/dashboard', { waitUntil: 'networkidle' })
-    await page.waitForTimeout(1000)
+    await page.waitForURL('**/procurement-pl', { timeout: 10000 })
+    await page.waitForTimeout(2000)
   })
 
   test('should display AI Recommendations section', async ({ page }) => {
@@ -42,9 +42,12 @@ test.describe('AI Recommendations', () => {
     await expect(profileHeading).toBeVisible()
   })
 
-  test('should open contact dialog when clicking "Связаться" button', async ({ page }) => {
+  test('should navigate to messages page with opened chat when clicking "Связаться" button', async ({ page }) => {
     // Ждём загрузки рекомендаций
     await page.waitForTimeout(2000)
+
+    // Получаем название первой компании в рекомендациях
+    const firstCompanyName = await page.locator('button:has-text("Связаться")').first().locator('..').locator('..').locator('h2, [role="heading"][level="2"]').first().textContent()
 
     // Ищем кнопку "Связаться"
     const contactButton = await page.locator('button:has-text("Связаться")').first()
@@ -55,10 +58,20 @@ test.describe('AI Recommendations', () => {
     // Клацаем по кнопке
     await contactButton.click()
 
-    // Проверяем что открыт диалог сообщения
-    await page.waitForTimeout(1000)
-    const messageDialog = await page.locator('text=Связаться|Contact', { exact: false })
-    await expect(messageDialog).toBeVisible({ timeout: 5000 })
+    // Проверяем переход на страницу сообщений
+    await page.waitForURL('**/messages', { waitUntil: 'networkidle' })
+    
+    // Ждём загрузки данных о компании
+    await page.waitForTimeout(2000)
+
+    // Проверяем что чат с компанией открыт
+    // Заголовок должен содержать название компании (без кавычек и префиксов)
+    const chatHeading = await page.locator('text=Сообщения').first()
+    await expect(chatHeading).toBeVisible()
+
+    // Проверяем наличие поля для ввода сообщения
+    const messageInput = await page.locator('textarea[placeholder*="Напишите сообщение"]')
+    await expect(messageInput).toBeVisible()
   })
 
   test('should display recommendation card with company name and industry', async ({ page }) => {

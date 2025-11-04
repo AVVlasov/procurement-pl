@@ -6,11 +6,6 @@ import {
   GridItem,
   VStack,
   Heading,
-  Text,
-  Dialog,
-  Textarea,
-  Button,
-  HStack,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { MainLayout } from '../../components/layout/MainLayout'
@@ -24,28 +19,24 @@ import {
   useRemoveFromFavoritesMutation,
 } from '../../__data__/api/searchApi'
 import type { SearchParams, SearchResult } from '../../__data__/api/searchApi'
-import { useSendMessageMutation } from '../../__data__/api/messagesApi'
-import { useAuth } from '../../hooks/useAuth'
+import type { Company } from '../../__data__/api/companiesApi'
 
 export const SearchPage = () => {
   const { t } = useTranslation('search')
   const toast = useToast()
-  const { company } = useAuth()
   
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<SearchParams>({
     page: 1,
-    limit: 10,
+    limit: 50, // Начальная загрузка 50 компаний
     sortBy: 'relevance',
     sortOrder: 'desc',
   })
   const [favoriteIds, setFavoriteIds] = useState<string[]>([])
-  const [contactDialogOpen, setContactDialogOpen] = useState(false)
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null)
-  const [selectedCompanyName, setSelectedCompanyName] = useState<string>('')
-  const [messageText, setMessageText] = useState('')
-
-  const [sendMessage, { isLoading: isSendingMessage }] = useSendMessageMutation()
+  
+  // Локальное накопление компаний для дефолтной загрузки
+  const [accumulatedCompanies, setAccumulatedCompanies] = useState<Company[]>([])
+  const [loadedPages, setLoadedPages] = useState(0) // Количество загруженных страниц
 
   const hasActiveFilters = useMemo(() => {
     return Boolean(
@@ -58,6 +49,9 @@ export const SearchPage = () => {
     )
   }, [filters])
 
+  const hasSearchQuery = Boolean(searchQuery.trim())
+  const isDefaultMode = !hasSearchQuery && !hasActiveFilters
+
   const {
     data: searchResults,
     isLoading: isSearching,
@@ -65,14 +59,39 @@ export const SearchPage = () => {
   } = useSearchCompaniesQuery(
     { ...filters, query: searchQuery.trim() },
     {
-      skip: !searchQuery.trim() && !hasActiveFilters, // Пропускаем только если нет ни текста, ни фильтров
+      skip: false, // Всегда загружаем
     }
   )
 
+  // Обработка результатов поиска
+  useEffect(() => {
+    if (searchResults?.companies) {
+      if (isDefaultMode) {
+        // В дефолтном режиме накапливаем компании
+        setAccumulatedCompanies(prev => {
+          // Если это первая загрузка (prev пуст), просто устанавливаем компании
+          if (prev.length === 0) {
+            setLoadedPages(1)
+            return searchResults.companies
+          }
+          // Дозагрузка - добавляем к существующим
+          const existingIds = new Set(prev.map(c => c.id))
+          const newCompanies = searchResults.companies.filter(c => !existingIds.has(c.id))
+          if (newCompanies.length > 0) {
+            setLoadedPages(prevPages => prevPages + 1)
+          }
+          return [...prev, ...newCompanies]
+        })
+      } else {
+        // При поиске/фильтрах не используем накопленные компании
+        setAccumulatedCompanies([])
+        setLoadedPages(0)
+      }
+    }
+  }, [searchResults, isDefaultMode])
+
   // Переводим запрос при изменении фильтров или текста
   useEffect(() => {
-    // Небольшая задержка, чтобы дать RTK Query время обработать новые параметры,
-    // затем явно вызываем refetch
     const timer = setTimeout(() => {
       refetch()
     }, 100)
@@ -84,64 +103,58 @@ export const SearchPage = () => {
 
   const handleSearch = async (query: string) => {
     setSearchQuery(query)
-    // Сохраняем выбранные фильтры, только сбрасываем страницу
+    // При поиске сбрасываем на начало
     setFilters(prev => ({
       ...prev,
       page: 1,
+      limit: 50, // При первом запросе загружаем 50
+      offset: undefined, // Сбрасываем offset
     }))
+    setAccumulatedCompanies([])
+    setLoadedPages(0)
   }
 
   const handleFiltersChange = (newFilters: SearchParams) => {
     console.log('[SearchPage] Filters changed:', newFilters)
-    setFilters(newFilters)
+    setFilters({
+      ...newFilters,
+      page: 1,
+      limit: 50, // При фильтрации начинаем с 50 компаний
+      offset: undefined, // Сбрасываем offset
+    })
+    setAccumulatedCompanies([])
+    setLoadedPages(0)
   }
 
   const handleResetFilters = () => {
+    setSearchQuery('') // Очищаем также поисковый запрос
     setFilters({
       page: 1,
-      limit: 10,
+      limit: 50,
       sortBy: 'relevance',
       sortOrder: 'desc',
+      offset: undefined,
     })
+    setAccumulatedCompanies([])
+    setLoadedPages(0)
   }
 
-  const handleContact = (companyId: string, companyName?: string) => {
-    setSelectedCompanyId(companyId)
-    setSelectedCompanyName(companyName || companyId)
-    setContactDialogOpen(true)
-    setMessageText('')
-  }
-
-  const handleSendMessage = async () => {
-    if (!messageText.trim() || !selectedCompanyId) return
-    
-    try {
-      const currentCompanyId = company?.id
+  const handleLoadMore = useCallback(() => {
+    if (isDefaultMode && accumulatedCompanies.length > 0) {
+      // В дефолтном режиме подгружаем по 20
+      // Используем offset для точной пагинации
+      const currentCount = accumulatedCompanies.length
       
-      if (!currentCompanyId) {
-        toast.error(t('common:errors.server_error'))
-        return
-      }
+      setFilters(prev => ({
+        ...prev,
+        offset: currentCount, // Загружаем со следующей компании
+        limit: 20,
+      }))
       
-      // Создаем thread ID на основе обеих компаний (в отсортированном порядке для консистентности)
-      const companyIds = [currentCompanyId, selectedCompanyId].sort()
-      const threadId = `thread-${companyIds[0]}-${companyIds[1]}`
-      
-      await sendMessage({
-        threadId,
-        text: messageText,
-        senderCompanyId: currentCompanyId,
-      }).unwrap()
-      
-      toast.success(t('common:messages.sent_successfully'))
-      setContactDialogOpen(false)
-      setMessageText('')
-      setSelectedCompanyId(null)
-      setSelectedCompanyName('')
-    } catch (error) {
-      toast.error(t('common:errors.server_error'))
+      // Вызываем refetch вручную
+      refetch()
     }
-  }
+  }, [isDefaultMode, accumulatedCompanies.length, refetch])
 
   const handleToggleFavorite = async (companyId: string) => {
     try {
@@ -196,62 +209,21 @@ export const SearchPage = () => {
             {/* Results */}
             <GridItem minW="0">
               <ResultsGrid
-                companies={searchResults?.companies || []}
+                companies={isDefaultMode ? accumulatedCompanies : (searchResults?.companies || [])}
                 total={searchResults?.total || 0}
                 isLoading={isSearching}
                 filters={filters}
                 onFiltersChange={handleFiltersChange}
-                onContact={handleContact}
                 onToggleFavorite={handleToggleFavorite}
                 favoriteIds={favoriteIds}
+                onLoadMore={handleLoadMore}
+                hasMore={isDefaultMode && accumulatedCompanies.length < (searchResults?.total || 0)}
+                showLoadMore={isDefaultMode}
               />
             </GridItem>
           </Grid>
         </VStack>
       </Container>
-
-      {/* Contact Dialog */}
-      <Dialog.Root open={contactDialogOpen} onOpenChange={(details) => setContactDialogOpen(details.open)}>
-        <Dialog.Backdrop />
-        <Dialog.Content>
-          <Dialog.Header>
-            <Dialog.Title>{t('common:messages.contact_company')}</Dialog.Title>
-          </Dialog.Header>
-          <Dialog.Body>
-            <VStack gap={4} align="stretch">
-              <Box>
-                <Text fontSize="sm" color="gray.600">{t('common:labels.company')}</Text>
-                <Text fontWeight="semibold">{selectedCompanyName}</Text>
-              </Box>
-              <Textarea
-                placeholder={t('common:messages.message_placeholder')}
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                minH="150px"
-                resize="none"
-              />
-            </VStack>
-          </Dialog.Body>
-          <Dialog.Footer>
-            <HStack gap={3} justify="flex-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setContactDialogOpen(false)}
-              >
-                {t('common:buttons.cancel')}
-              </Button>
-              <Button
-                colorPalette="brand"
-                onClick={handleSendMessage}
-                loading={isSendingMessage}
-                disabled={!messageText.trim()}
-              >
-                {t('common:buttons.submit')}
-              </Button>
-            </HStack>
-          </Dialog.Footer>
-        </Dialog.Content>
-      </Dialog.Root>
     </MainLayout>
   )
 }

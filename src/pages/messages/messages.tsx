@@ -14,6 +14,7 @@ import {
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiSend, FiSearch, FiX } from 'react-icons/fi'
+import { useSearchParams } from 'react-router-dom'
 import { MainLayout } from '../../components/layout/MainLayout'
 import {
   useGetThreadsQuery,
@@ -56,7 +57,7 @@ const getThreadsFromLocalStorage = (): LocalThread[] => {
   try {
     const threads = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}')
     return Object.values(threads) as LocalThread[]
-  } catch (e) {
+  } catch (_e) {
     return []
   }
 }
@@ -66,6 +67,7 @@ export default function MessagesPage() {
   const { company } = useAuth()
   const myCompanyId = company?.id
   const toast = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const { data: apiThreads = [], refetch: refetchThreads } = useGetThreadsQuery(undefined, {
     pollingInterval: 5000,
@@ -96,15 +98,29 @@ export default function MessagesPage() {
     setLocalThreads(getThreadsFromLocalStorage())
   }, [])
 
+  // Обработка query параметра companyId для автоматического открытия чата
+  React.useEffect(() => {
+    const companyId = searchParams.get('companyId')
+    if (companyId && myCompanyId) {
+      // Создаем threadId и открываем чат
+      const threadId = `thread-${[myCompanyId, companyId].sort().join('-')}`
+      setActiveThreadId(threadId)
+      
+      // Убираем параметр из URL
+      searchParams.delete('companyId')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, myCompanyId, setSearchParams])
+
   React.useEffect(() => {
     if (activeThreadId) {
       refetchThreadMessages()
     }
   }, [activeThreadId, refetchThreadMessages])
 
-  // Объединяем API потоки и localStorage потоки
-  const allThreads = useMemo(() => {
-    const threadMap = new Map<string, any>()
+  // Объединяем API потоки и localStorage потоки (используется косвенно в conversationHistory)
+  const _allThreads = useMemo(() => {
+    const threadMap = new Map<string, LocalThread | (typeof apiThreads)[0]>()
     
     // Добавляем API потоки
     apiThreads.forEach(thread => {
@@ -136,28 +152,28 @@ export default function MessagesPage() {
   // Получить информацию о компании собеседника
   const { data: activeCompanyInfo } = useGetCompanyQuery(activeCompanyId || '', { skip: !activeCompanyId })
 
-  // Группируем threads по otherCompanyId
-  const groupedThreads = useMemo(() => {
-    const grouped: Record<string, any> = {}
-    allThreads.forEach((thread: any) => {
-      const threadId = thread.threadId || thread.id || thread._id
-      if (!threadId) return // Skip if no threadId
-      
-      const ids = threadId.split('-').filter((id: string) => id && id !== 'thread')
-      const otherCompanyId = ids.find((id: string) => id !== myCompanyId) || 'Unknown'
+  // Не используется, но оставлен для будущего функционала группировки
+  // const groupedThreads = useMemo(() => {
+  //   const grouped: Record<string, MessageThread> = {}
+  //   allThreads.forEach((thread) => {
+  //     const threadId = thread.threadId || thread.id || thread._id
+  //     if (!threadId) return
+  //     
+  //     const ids = threadId.split('-').filter((id) => id && id !== 'thread')
+  //     const otherCompanyId = ids.find((id) => id !== myCompanyId) || 'Unknown'
 
-      if (!grouped[otherCompanyId]) {
-        grouped[otherCompanyId] = thread
-      }
-    })
-    return grouped
-  }, [allThreads, myCompanyId])
+  //     if (!grouped[otherCompanyId]) {
+  //       grouped[otherCompanyId] = thread
+  //     }
+  //   })
+  //   return grouped
+  // }, [allThreads, myCompanyId])
 
   // Создаём словарь companyId -> companyName из загруженных компаний
   const companyNamesMap = useMemo(() => {
     const map = new Map<string, string>()
     if (companyOptions?.companies) {
-      companyOptions.companies.forEach((company: any) => {
+      companyOptions.companies.forEach((company) => {
         map.set(company.id, company.shortName || company.fullName || company.id)
       })
     }
@@ -166,18 +182,29 @@ export default function MessagesPage() {
 
   // История компаний с которыми переписывались
   const conversationHistory = useMemo(() => {
+    interface ConversationItem {
+      companyId: string
+      thread: {
+        threadId: string
+        lastMessage: string
+        lastMessageAt: string
+      }
+      companyName: string
+    }
+    
     // Создаём Map всех потоков (API + localStorage)
-    const allThreadsMap = new Map<string, any>()
+    const allThreadsMap = new Map<string, ConversationItem>()
     
     // Добавляем из API
-    apiThreads.forEach((thread: any) => {
+    apiThreads.forEach((thread) => {
       const threadId = thread.threadId
       if (!threadId) return
-      const ids = threadId.split('-').filter((id: string) => id && id !== 'thread')
-      const otherCompanyId = ids.find((id: string) => id !== myCompanyId)
+      const ids = threadId.split('-').filter((id) => id && id !== 'thread')
+      const otherCompanyId = ids.find((id) => id !== myCompanyId)
       if (otherCompanyId) {
         // Получаем имя компании из словаря или используем ID
-        const companyName = companyNamesMap.get(otherCompanyId) || thread.companyName || otherCompanyId
+        const threadWithName = thread as typeof thread & { companyName?: string }
+        const companyName = companyNamesMap.get(otherCompanyId) || threadWithName.companyName || otherCompanyId
         allThreadsMap.set(otherCompanyId, {
           companyId: otherCompanyId,
           thread,
@@ -187,7 +214,7 @@ export default function MessagesPage() {
     })
     
     // Добавляем из localStorage (они приоритетные и имеют имя компании)
-    localThreads.forEach((localThread: LocalThread) => {
+    localThreads.forEach((localThread) => {
       const otherCompanyId = localThread.companyId
       // Обновляем имя из словаря, если доступно
       const companyName = companyNamesMap.get(otherCompanyId) || localThread.companyName
@@ -217,8 +244,8 @@ export default function MessagesPage() {
   const filteredCompanies = useMemo(() => {
     if (!searchQuery) return []
     return (
-      companyOptions?.companies?.filter((c: any) =>
-        (c.shortName + c.fullName).toLowerCase().includes(searchQuery.toLowerCase())
+      companyOptions?.companies?.filter((c) =>
+        ((c.shortName || '') + (c.fullName || '')).toLowerCase().includes(searchQuery.toLowerCase())
       ) || []
     )
   }, [searchQuery, companyOptions])
@@ -339,15 +366,15 @@ export default function MessagesPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 border="none"
-                focusBorderColor="transparent"
-                _focus={{ boxShadow: 'none' }}
+                outline="none"
+                _focus={{ outline: 'none', boxShadow: 'none' }}
               />
             </HStack>
 
             {/* Search Results */}
             {searchQuery && filteredCompanies.length > 0 && (
               <VStack gap={2} align="stretch" w="full">
-                {filteredCompanies.map((c: any) => (
+                {filteredCompanies.map((c) => (
                   <Box
                     key={c.id}
                     p={3}
@@ -398,14 +425,14 @@ export default function MessagesPage() {
                           <Text
                             fontWeight="700"
                             fontSize="sm"
-                            noOfLines={1}
+                            lineClamp={1}
                             color={activeCompanyId === companyId ? 'white' : 'gray.900'}
                           >
                             {companyName || companyId}
                           </Text>
                           <Text
                             fontSize="xs"
-                            noOfLines={2}
+                            lineClamp={2}
                             color={activeCompanyId === companyId ? 'white' : 'gray.700'}
                           >
                             {thread.lastMessage}
@@ -447,11 +474,12 @@ export default function MessagesPage() {
                   </VStack>
                   <IconButton
                     aria-label="Close"
-                    icon={<FiX />}
                     variant="ghost"
                     onClick={() => setActiveThreadId(null)}
                     display={{ base: 'flex', md: 'none' }}
-                  />
+                  >
+                    <FiX />
+                  </IconButton>
                 </HStack>
 
                 <VStack
@@ -463,7 +491,7 @@ export default function MessagesPage() {
                   align="stretch"
                   bg="gray.50"
                 >
-                  {messages.map((m: any) => (
+                  {messages.map((m) => (
                     <Box
                       key={m.id || m._id}
                       alignSelf={m.senderCompanyId === myCompanyId ? 'flex-end' : 'flex-start'}

@@ -28,6 +28,7 @@ const reviewsRoutes = require(path.join(__dirname, '..', 'routes', 'reviews'));
 const buyProductsRoutes = require(path.join(__dirname, '..', 'routes', 'buyProducts'));
 const requestsRoutes = require(path.join(__dirname, '..', 'routes', 'requests'));
 const homeRoutes = require(path.join(__dirname, '..', 'routes', 'home'));
+const activityRoutes = require(path.join(__dirname, '..', 'routes', 'activity'));
 
 const app = express();
 
@@ -93,6 +94,7 @@ app.use('/products', productsRoutes);
 app.use('/reviews', reviewsRoutes);
 app.use('/requests', requestsRoutes);
 app.use('/home', homeRoutes);
+app.use('/activity', activityRoutes);
 
 // Обработка ошибок
 app.use((err, req, res, next) => {

@@ -10,6 +10,7 @@ import { requestsApi } from './api/requestsApi'
 import { homeApi } from './api/homeApi'
 import { reviewsApi } from './api/reviewsApi'
 import { buyProductsApi } from './api/buyProductsApi'
+import { activityApi } from './api/activityApi'
 import { baseApi } from './api/client'
 import authReducer from './slices/authSlice'
 
@@ -26,6 +27,7 @@ export const store = configureStore({
     [homeApi.reducerPath]: homeApi.reducer,
     [reviewsApi.reducerPath]: reviewsApi.reducer,
     [buyProductsApi.reducerPath]: buyProductsApi.reducer,
+    [activityApi.reducerPath]: activityApi.reducer,
     [baseApi.reducerPath]: baseApi.reducer,
     
     // Regular slices
@@ -48,6 +50,7 @@ export const store = configureStore({
       homeApi.middleware,
       reviewsApi.middleware,
       buyProductsApi.middleware,
+      activityApi.middleware,
       baseApi.middleware
     ),
 })

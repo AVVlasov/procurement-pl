@@ -1,5 +1,34 @@
 const mongoose = require('mongoose');
 
+// Явно определяем схему для файлов
+const fileSchema = new mongoose.Schema({
+  id: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  url: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  storagePath: String,
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+}, { _id: false });
+
 const buyProductSchema = new mongoose.Schema({
   companyId: {
     type: String,
@@ -24,18 +53,7 @@ const buyProductSchema = new mongoose.Schema({
     type: String,
     default: 'шт'
   },
-  files: [{
-    id: String,
-    name: String,
-    url: String,
-    type: String,
-    size: Number,
-    storagePath: String,
-    uploadedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
+  files: [fileSchema],
   acceptedBy: [{
     companyId: {
       type: mongoose.Schema.Types.ObjectId,

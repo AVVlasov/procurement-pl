@@ -34,6 +34,10 @@ export const CompanyCard = ({
   const bg = colors.bg.primary
   const borderColor = colors.border.primary
 
+  const handleContact = () => {
+    navigate(`/messages?companyId=${company.id}`)
+  }
+
   return (
     <Box
       bg={bg}
@@ -144,7 +148,7 @@ export const CompanyCard = ({
             flex={1}
             variant="outline"
             colorPalette="brand"
-            onClick={() => onContact?.(company.id, company.shortName || company.fullName)}
+            onClick={handleContact}
             size={{ base: 'sm', md: 'md' }}
           >
             <FiMail />

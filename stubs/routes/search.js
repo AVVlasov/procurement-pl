@@ -58,6 +58,7 @@ router.get('/', verifyToken, async (req, res) => {
       query = '', 
       page = 1, 
       limit = 10,
+      offset, // Добавляем поддержку offset для точной пагинации
       industries,
       companySize,
       geography,
@@ -173,10 +174,10 @@ router.get('/', verifyToken, async (req, res) => {
     // Комбинировать все фильтры
     let filter = filters.length > 0 ? { $and: filters } : {};
 
-    // Пагинация
-    const pageNum = parseInt(page) || 1;
+    // Пагинация - используем offset если передан, иначе вычисляем из page
     const limitNum = parseInt(limit) || 10;
-    const skip = (pageNum - 1) * limitNum;
+    const skip = offset !== undefined ? parseInt(offset) : ((parseInt(page) || 1) - 1) * limitNum;
+    const pageNum = offset !== undefined ? Math.floor(skip / limitNum) + 1 : parseInt(page) || 1;
 
     // Сортировка
     let sortOptions = {};
