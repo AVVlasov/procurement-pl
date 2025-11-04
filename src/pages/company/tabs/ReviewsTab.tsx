@@ -70,8 +70,23 @@ export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) 
       : '0.0'
 
   const handleSubmitReview = async () => {
-    if (!rating || !comment.trim() || !companyId) {
+    if (!rating || !companyId) {
       toast.warning(t('common:labels.fill_required_fields') || 'Заполните все поля')
+      return
+    }
+
+    if (!comment.trim()) {
+      toast.warning('Введите текст отзыва')
+      return
+    }
+
+    if (comment.trim().length < 10) {
+      toast.warning('Отзыв должен содержать минимум 10 символов')
+      return
+    }
+
+    if (comment.trim().length > 1000) {
+      toast.warning('Отзыв не должен превышать 1000 символов')
       return
     }
 
@@ -86,8 +101,10 @@ export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) 
       setRating(0)
       setComment('')
       onClose()
-    } catch (error) {
-      toast.error(t('common:errors.server_error') || 'Ошибка при отправке отзыва')
+    } catch (error: any) {
+      console.error('Review submission error:', error)
+      const errorMessage = error?.data?.error || error?.data?.message || t('common:errors.server_error')
+      toast.error(errorMessage)
     }
   }
 
@@ -236,8 +253,11 @@ export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) 
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={6}
-                    placeholder="Поделитесь своим опытом сотрудничества..."
+                    placeholder="Поделитесь своим опытом сотрудничества (минимум 10 символов)..."
                   />
+                  <Text fontSize="xs" color="gray.500" mt={1}>
+                    {comment.trim().length} / 1000 символов (минимум 10)
+                  </Text>
                 </Field.Root>
 
                 <Box
@@ -261,7 +281,7 @@ export const ReviewsTab = ({ isOwnCompany = true, companyId }: ReviewsTabProps) 
               <Button
                 colorPalette="brand"
                 onClick={handleSubmitReview}
-                disabled={rating === 0 || comment.trim() === ''}
+                disabled={rating === 0 || comment.trim().length < 10}
                 loading={isSubmitting}
               >
                 {t('reviews.submit')}

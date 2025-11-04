@@ -243,7 +243,20 @@
       "name": "User name",
       "email": "Email",
       "company": "Company",
-      "unknown": "Not specified"
+      "position": "Position",
+      "phone": "Phone",
+      "unknown": "Not specified",
+      "editTitle": "Edit profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "firstNamePlaceholder": "Enter first name",
+      "lastNamePlaceholder": "Enter last name",
+      "positionPlaceholder": "Enter position",
+      "phonePlaceholder": "Enter phone",
+      "updateError": "Error updating profile",
+      "validation": {
+        "required": "First name and last name are required"
+      }
     },
     "notifications": {
       "title": "Notifications",

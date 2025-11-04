@@ -84,13 +84,30 @@ router.get('/my/stats', verifyToken, async (req, res) => {
         : Promise.resolve(0),
     ]);
 
+    // Подсчитываем просмотры профиля из запросов к профилю компании
+    const profileViews = company?.metrics?.profileViews || 0;
+    
+    // Получаем статистику за последнюю неделю для изменений
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    
+    const sentRequestsLastWeek = await Request.countDocuments({
+      senderCompanyId: companyIdString,
+      createdAt: { $gte: weekAgo }
+    });
+    
+    const receivedRequestsLastWeek = await Request.countDocuments({
+      recipientCompanyId: companyIdString,
+      createdAt: { $gte: weekAgo }
+    });
+
     const stats = {
-      profileViews: company?.metrics?.profileViews || 0,
-      profileViewsChange: 0,
+      profileViews: profileViews,
+      profileViewsChange: 0, // Можно добавить отслеживание просмотров, если нужно
       sentRequests,
-      sentRequestsChange: 0,
+      sentRequestsChange: sentRequestsLastWeek,
       receivedRequests,
-      receivedRequestsChange: 0,
+      receivedRequestsChange: receivedRequestsLastWeek,
       newMessages: unreadMessages,
       rating: Number.isFinite(company?.rating) ? Number(company.rating) : 0,
     };
@@ -229,6 +246,24 @@ router.get('/:id', async (req, res) => {
         ...placeholder.toObject(),
         id: placeholder._id,
       });
+    }
+    
+    // Отслеживаем просмотр профиля (если это не владелец компании)
+    const userId = req.userId;
+    if (userId) {
+      const User = require('../models/User');
+      const user = await User.findById(userId);
+      if (user && user.companyId && user.companyId.toString() !== company._id.toString()) {
+        // Инкрементируем просмотры профиля
+        if (!company.metrics) {
+          company.metrics = {};
+        }
+        if (!company.metrics.profileViews) {
+          company.metrics.profileViews = 0;
+        }
+        company.metrics.profileViews = (company.metrics.profileViews || 0) + 1;
+        await company.save();
+      }
     }
     
     res.json({

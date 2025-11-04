@@ -20,7 +20,7 @@ import {
   Spinner,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
-import { FiFileText, FiSend, FiDownload, FiTrash2, FiEye, FiZap } from 'react-icons/fi'
+import { FiFileText, FiSend, FiDownload, FiTrash2, FiEye } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useAuth } from '../../hooks/useAuth'
 import {
@@ -32,7 +32,7 @@ import {
   type Request as RequestModel,
   type RequestFile,
 } from '../../__data__/api/requestsApi'
-import { useSearchCompaniesQuery, useAiSearchMutation } from '../../__data__/api/searchApi'
+import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
 import {
   useGetCompanyBuyProductsQuery,
   useGetBuyProductAcceptancesQuery,
@@ -71,8 +71,6 @@ const RequestsPage = () => {
   const [selectedProductId, setSelectedProductId] = useState<string>('')
   const requestFileInputRef = React.useRef<HTMLInputElement>(null)
   const [recipientSearch, setRecipientSearch] = useState('')
-  const [aiRecipients, setAiRecipients] = useState<RecipientOption[]>([])
-  const [aiSearch, { isLoading: isAiLoading }] = useAiSearchMutation()
 
   const { data: productAcceptances = [], isLoading: isLoadingAcceptances } = useGetBuyProductAcceptancesQuery(
     selectedProductId,
@@ -101,7 +99,6 @@ const RequestsPage = () => {
   useEffect(() => {
     if (!selectedProductId) {
       setSubject('')
-      setAiRecipients([])
       return
     }
 
@@ -161,7 +158,6 @@ const RequestsPage = () => {
   const combinedRecipients = useMemo(() => {
     const recipientsMap = new Map<string, RecipientOption>()
     acceptanceOptions.forEach((option) => recipientsMap.set(option.id, option))
-    aiRecipients.forEach((option) => recipientsMap.set(option.id, option))
 
     if (recipientSearch.trim().length > 0 || recipientsMap.size === 0) {
       allCompanyOptions.forEach((option) => {
@@ -193,7 +189,7 @@ const RequestsPage = () => {
         return a.name.localeCompare(b.name)
       })
       .slice(0, 120)
-  }, [acceptanceOptions, aiRecipients, allCompanyOptions, recipientSearch])
+  }, [acceptanceOptions, allCompanyOptions, recipientSearch])
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
@@ -266,7 +262,6 @@ const RequestsPage = () => {
       setSelectedFiles([])
       setSelectedProductId('')
       setRecipientSearch('')
-      setAiRecipients([])
       if (requestFileInputRef.current) {
         requestFileInputRef.current.value = ''
       }
@@ -315,56 +310,6 @@ const RequestsPage = () => {
     setResponseFiles((prev) => prev.filter((_, idx) => idx !== index))
     if (responseFileInputRef.current && responseFiles.length === 1) {
       responseFileInputRef.current.value = ''
-    }
-  }
-
-  const handleAiSuggest = async () => {
-    const baseQuery = subject.trim() || requestText.trim()
-    if (!baseQuery) {
-      showToast.warning(t('requests.aiQueryRequired') || 'Сначала заполните предмет или текст запроса')
-      return
-    }
-
-    try {
-      const aiResult = await aiSearch({
-        query: baseQuery,
-        context: {
-          companyId,
-          type: 'buy',
-        },
-      }).unwrap()
-
-      if (!aiResult?.companies || aiResult.companies.length === 0) {
-        showToast.info(t('requests.aiEmpty') || 'Подходящих компаний не найдено')
-        return
-      }
-
-      setAiRecipients((prev) => {
-        const existingIds = new Set(prev.map((item) => item.id))
-        const updated = [...prev]
-
-        aiResult.companies.forEach((company: any) => {
-          if (!company?.id || existingIds.has(company.id)) {
-            return
-          }
-
-          const name = company.shortName || company.fullName || company.id
-          updated.push({
-            id: company.id,
-            name,
-            source: 'ai',
-            description: company.reason || undefined,
-          })
-          existingIds.add(company.id)
-        })
-
-        return updated
-      })
-
-      showToast.success(t('requests.aiSuccess') || 'Добавлены рекомендации по компаниям')
-    } catch (error) {
-      console.error('[RequestsPage] AI suggestion error:', error)
-      showToast.error(t('requests.aiError') || 'Не удалось получить подсказки по компаниям')
     }
   }
 
@@ -482,9 +427,9 @@ const RequestsPage = () => {
 
   return (
     <MainLayout>
-      <Container maxW="container.xl">
+      <Container maxW="container.xl" px={{ base: 3, md: 6 }}>
         <VStack gap={6} align="stretch">
-          <Heading size="xl">{t('requests.title') || 'Запросы'}</Heading>
+          <Heading size={{ base: 'lg', md: 'xl' }}>{t('requests.title') || 'Запросы'}</Heading>
 
           <Tabs.Root
             value={activeTab}
@@ -492,23 +437,23 @@ const RequestsPage = () => {
             colorPalette="brand"
             variant="enclosed"
           >
-            <Tabs.List>
-              <Tabs.Trigger value="sent" whiteSpace="nowrap">
+            <Tabs.List flexWrap="wrap">
+              <Tabs.Trigger value="sent" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
                 {t('requests.sentTab') || 'Запросы направленные'}
               </Tabs.Trigger>
-              <Tabs.Trigger value="received" whiteSpace="nowrap">
+              <Tabs.Trigger value="received" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
                 {t('requests.receivedTab') || 'Запросы полученные'}
               </Tabs.Trigger>
-              <Tabs.Trigger value="responses" whiteSpace="nowrap">
+              <Tabs.Trigger value="responses" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
                 {t('requests.responsesTab') || 'Ответы на запросы'}
               </Tabs.Trigger>
             </Tabs.List>
 
-            <Box flex="1" p={6}>
-              <Tabs.Content value="sent">
+            <Tabs.Content value="sent">
+              <Box pt={6}>
                 <VStack gap={6} align="stretch">
-                  <VStack align="stretch" gap={4} p={4} borderWidth="1px" borderRadius="lg" bg="white">
-                    <Text fontWeight="semibold">{t('requests.newRequest') || 'Отправить новый запрос'}</Text>
+                  <VStack align="stretch" gap={4} borderWidth="1px" borderRadius="lg" bg="white" p={{ base: 3, md: 4 }}>
+                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.newRequest') || 'Отправить новый запрос'}</Text>
 
                     <Field.Root required>
                       <Field.Label>{t('requests.product') || 'Выберите товар'}</Field.Label>
@@ -564,7 +509,17 @@ const RequestsPage = () => {
                         onChange={handleFileSelect}
                         multiple
                         accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                        display="none"
                       />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => requestFileInputRef.current?.click()}
+                        gap={2}
+                      >
+                        <FiFileText />
+                        <Text>{t('requests.selectFiles') || 'Выбрать файлы'}</Text>
+                      </Button>
                       {selectedFiles.length > 0 && (
                         <VStack gap={2} mt={2} align="start">
                           {selectedFiles.map((file, index) => (
@@ -604,20 +559,6 @@ const RequestsPage = () => {
                         placeholder={t('requests.recipientsSearch') || 'Поиск компаний'}
                         size="sm"
                       />
-
-                      <HStack gap={2} flexWrap="wrap">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          colorPalette="brand"
-                          gap={2}
-                          onClick={handleAiSuggest}
-                          disabled={isAiLoading}
-                        >
-                          {isAiLoading ? <Spinner size="xs" /> : <FiZap />}
-                          <Text>{t('requests.aiButton') || 'Подобрать компании (ИИ)'}</Text>
-                        </Button>
-                      </HStack>
 
                       {combinedRecipients.length === 0 ? (
                         <Text fontSize="xs" color="gray.500">
@@ -675,6 +616,8 @@ const RequestsPage = () => {
                         }
                         loading={isSending}
                         gap={2}
+                        size={{ base: 'sm', md: 'md' }}
+                        w={{ base: 'full', md: 'auto' }}
                       >
                         <FiSend />
                         <Text>{t('requests.sendButton') || 'Отправить запрос'}</Text>
@@ -683,15 +626,17 @@ const RequestsPage = () => {
                   </VStack>
 
                   <VStack gap={4} align="stretch">
-                    <Text fontWeight="semibold">{t('requests.sentHistory') || 'История отправленных запросов'}</Text>
+                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.sentHistory') || 'История отправленных запросов'}</Text>
                     {groupedSentRequests.length > 0 ? (
                       <VStack align="stretch" gap={4}>
                         {groupedSentRequests.map(([groupSubject, requests]) => (
-                          <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={4} bg="white">
-                            <Heading size="sm" mb={3}>
+                          <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={{ base: 3, md: 4 }} bg="white" overflow="hidden">
+                            <Heading size={{ base: 'xs', md: 'sm' }} mb={3}>
                               {groupSubject}
                             </Heading>
-                            <Box overflowX="auto">
+                            
+                            {/* Desktop: Table */}
+                            <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" mx={-4} mb={-4}>
                               <Table.Root variant="line">
                                 <Table.Header>
                                   <Table.Row>
@@ -752,6 +697,87 @@ const RequestsPage = () => {
                                 </Table.Body>
                               </Table.Root>
                             </Box>
+
+                            {/* Mobile: Cards */}
+                            <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
+                              {requests.map((req) => (
+                                <Box
+                                  key={req._id || req.id}
+                                  p={3}
+                                  borderWidth="1px"
+                                  borderRadius="md"
+                                  bg="gray.50"
+                                >
+                                  <VStack align="stretch" gap={2}>
+                                    <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                      <Text fontWeight="bold" fontSize="sm">
+                                        {getCompanyName(req.recipientCompanyId)}
+                                      </Text>
+                                      <Badge
+                                        colorPalette={
+                                          req.status === 'accepted'
+                                            ? 'green'
+                                            : req.status === 'rejected'
+                                              ? 'red'
+                                              : 'yellow'
+                                        }
+                                      >
+                                        {req.status === 'pending'
+                                          ? t('requests.statusPending') || 'Ожидание'
+                                          : req.status === 'accepted'
+                                            ? t('requests.statusAccepted') || 'Принято'
+                                            : t('requests.statusRejected') || 'Отклонено'}
+                                      </Badge>
+                                    </HStack>
+
+                                    <Box>
+                                      <Text fontSize="xs" color="gray.500" mb={1}>
+                                        {t('requests.tableText') || 'Текст'}:
+                                      </Text>
+                                      <Text fontSize="sm" color="gray.700">
+                                        {req.text}
+                                      </Text>
+                                    </Box>
+
+                                    {req.response && (
+                                      <Box>
+                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                          {t('requests.tableResponse') || 'Ответ'}:
+                                        </Text>
+                                        <Text fontSize="sm" color="gray.700">
+                                          {req.response}
+                                        </Text>
+                                      </Box>
+                                    )}
+
+                                    {req.files && req.files.length > 0 && (
+                                      <Box>
+                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                          {t('requests.tableFiles') || 'Файлы'}:
+                                        </Text>
+                                        {renderFileList(req.files)}
+                                      </Box>
+                                    )}
+
+                                    <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                      <Text fontSize="xs" color="gray.400">
+                                        {formatDate(req.createdAt)}
+                                      </Text>
+                                      <Button
+                                        size="xs"
+                                        variant="outline"
+                                        colorPalette="red"
+                                        onClick={() => handleDeleteRequest(req._id || req.id || '')}
+                                        gap={1}
+                                      >
+                                        <FiTrash2 />
+                                        <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
+                                      </Button>
+                                    </HStack>
+                                  </VStack>
+                                </Box>
+                              ))}
+                            </VStack>
                           </Box>
                         ))}
                       </VStack>
@@ -762,34 +788,95 @@ const RequestsPage = () => {
                     )}
                   </VStack>
                 </VStack>
-              </Tabs.Content>
+              </Box>
+            </Tabs.Content>
 
-              <Tabs.Content value="received">
+            <Tabs.Content value="received">
+              <Box pt={6}>
                 <VStack gap={6} align="stretch">
-                  <Text fontWeight="semibold">{t('requests.receivedTitle') || 'Полученные запросы'}</Text>
+                  <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.receivedTitle') || 'Полученные запросы'}</Text>
 
                   {receivedRequests.length > 0 ? (
-                    <Box overflowX="auto">
-                      <Table.Root variant="line">
-                        <Table.Header>
-                          <Table.Row>
-                            <Table.ColumnHeader>{t('requests.tableFromCompany') || 'От компании'}</Table.ColumnHeader>
-                            <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
-                            <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
-                            <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
-                            <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
-                            <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
-                          </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                          {receivedRequests.map((req: RequestModel) => (
-                            <Table.Row key={req._id || req.id}>
-                              <Table.Cell fontWeight="medium">{getCompanyName(req.senderCompanyId)}</Table.Cell>
-                              <Table.Cell fontSize="sm" color="gray.600">
-                                {req.text}
-                              </Table.Cell>
-                              <Table.Cell>{renderFileList(req.files)}</Table.Cell>
-                              <Table.Cell>
+                    <>
+                      {/* Desktop: Table */}
+                      <Box display={{ base: 'none', lg: 'block' }} overflowX="auto">
+                        <Table.Root variant="line">
+                          <Table.Header>
+                            <Table.Row>
+                              <Table.ColumnHeader>{t('requests.tableFromCompany') || 'От компании'}</Table.ColumnHeader>
+                              <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
+                              <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
+                              <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                              <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
+                              <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
+                            </Table.Row>
+                          </Table.Header>
+                          <Table.Body>
+                            {receivedRequests.map((req: RequestModel) => (
+                              <Table.Row key={req._id || req.id}>
+                                <Table.Cell fontWeight="medium">{getCompanyName(req.senderCompanyId)}</Table.Cell>
+                                <Table.Cell fontSize="sm" color="gray.600">
+                                  {req.text}
+                                </Table.Cell>
+                                <Table.Cell>{renderFileList(req.files)}</Table.Cell>
+                                <Table.Cell>
+                                  <Badge
+                                    colorPalette={
+                                      req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
+                                    }
+                                  >
+                                    {req.status === 'pending'
+                                      ? t('requests.statusPending') || 'Ожидание'
+                                      : req.status === 'accepted'
+                                        ? t('requests.statusAccepted') || 'Принято'
+                                        : t('requests.statusRejected') || 'Отклонено'}
+                                  </Badge>
+                                </Table.Cell>
+                                <Table.Cell fontSize="xs" color="gray.400">
+                                  {formatDate(req.createdAt)}
+                                </Table.Cell>
+                                <Table.Cell>
+                                  <Button
+                                    size="xs"
+                                    variant={req.status === 'pending' ? 'solid' : 'outline'}
+                                    colorPalette="brand"
+                                    onClick={() => setRespondingTo(req._id || req.id || '')}
+                                    gap={2}
+                                  >
+                                    {req.status === 'pending' ? (
+                                      <>
+                                        <FiSend />
+                                        <Text>{t('requests.respond') || 'Ответить'}</Text>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FiEye />
+                                        <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
+                                      </>
+                                    )}
+                                  </Button>
+                                </Table.Cell>
+                              </Table.Row>
+                            ))}
+                          </Table.Body>
+                        </Table.Root>
+                      </Box>
+
+                      {/* Mobile: Cards */}
+                      <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
+                        {receivedRequests.map((req: RequestModel) => (
+                          <Box
+                            key={req._id || req.id}
+                            p={3}
+                            borderWidth="1px"
+                            borderRadius="md"
+                            bg="white"
+                          >
+                            <VStack align="stretch" gap={2}>
+                              <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                <Text fontWeight="bold" fontSize="sm">
+                                  {getCompanyName(req.senderCompanyId)}
+                                </Text>
                                 <Badge
                                   colorPalette={
                                     req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
@@ -801,17 +888,36 @@ const RequestsPage = () => {
                                       ? t('requests.statusAccepted') || 'Принято'
                                       : t('requests.statusRejected') || 'Отклонено'}
                                 </Badge>
-                              </Table.Cell>
-                              <Table.Cell fontSize="xs" color="gray.400">
-                                {formatDate(req.createdAt)}
-                              </Table.Cell>
-                              <Table.Cell>
+                              </HStack>
+
+                              <Box>
+                                <Text fontSize="xs" color="gray.500" mb={1}>
+                                  {t('requests.tableText') || 'Текст'}:
+                                </Text>
+                                <Text fontSize="sm" color="gray.700">
+                                  {req.text}
+                                </Text>
+                              </Box>
+
+                              {req.files && req.files.length > 0 && (
+                                <Box>
+                                  <Text fontSize="xs" color="gray.500" mb={1}>
+                                    {t('requests.tableFiles') || 'Файлы'}:
+                                  </Text>
+                                  {renderFileList(req.files)}
+                                </Box>
+                              )}
+
+                              <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                <Text fontSize="xs" color="gray.400">
+                                  {formatDate(req.createdAt)}
+                                </Text>
                                 <Button
                                   size="xs"
                                   variant={req.status === 'pending' ? 'solid' : 'outline'}
                                   colorPalette="brand"
                                   onClick={() => setRespondingTo(req._id || req.id || '')}
-                                  gap={2}
+                                  gap={1}
                                 >
                                   {req.status === 'pending' ? (
                                     <>
@@ -825,26 +931,28 @@ const RequestsPage = () => {
                                     </>
                                   )}
                                 </Button>
-                              </Table.Cell>
-                            </Table.Row>
-                          ))}
-                        </Table.Body>
-                      </Table.Root>
-                    </Box>
+                              </HStack>
+                            </VStack>
+                          </Box>
+                        ))}
+                      </VStack>
+                    </>
                   ) : (
                     <Box p={8} textAlign="center" color="gray.500">
                       <Text>{t('requests.receivedEmpty') || 'Нет полученных запросов'}</Text>
                     </Box>
                   )}
                 </VStack>
-              </Tabs.Content>
+              </Box>
+            </Tabs.Content>
 
-              <Tabs.Content value="responses">
+            <Tabs.Content value="responses">
+              <Box pt={6}>
                 <VStack gap={6} align="stretch">
-                  <HStack justify="space-between">
-                    <Text fontWeight="semibold">{t('requests.responsesTitle') || 'Ответы на отправленные запросы'}</Text>
+                  <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
+                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.responsesTitle') || 'Ответы на отправленные запросы'}</Text>
                     <Button
-                      size="sm"
+                      size={{ base: 'xs', md: 'sm' }}
                       variant="outline"
                       onClick={() => {
                         const responses = sentRequests.filter((r: RequestModel) => r.response)
@@ -869,18 +977,21 @@ const RequestsPage = () => {
                       gap={2}
                     >
                       <FiDownload />
-                      <Text>{t('requests.exportXlsx') || 'Экспортировать в XLSX'}</Text>
+                      <Text display={{ base: 'none', md: 'block' }}>{t('requests.exportXlsx') || 'Экспортировать в XLSX'}</Text>
+                      <Text display={{ base: 'block', md: 'none' }}>XLSX</Text>
                     </Button>
                   </HStack>
 
                   {groupedResponses.length > 0 ? (
                     <VStack align="stretch" gap={4}>
                       {groupedResponses.map(([groupSubject, requests]) => (
-                        <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={4} bg="white">
-                          <Heading size="sm" mb={3}>
+                        <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={{ base: 3, md: 4 }} bg="white" overflow="hidden">
+                          <Heading size={{ base: 'xs', md: 'sm' }} mb={3}>
                             {groupSubject}
                           </Heading>
-                          <Box overflowX="auto">
+                          
+                          {/* Desktop: Table */}
+                          <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" mx={-4} mb={-4}>
                             <Table.Root variant="line">
                               <Table.Header>
                                 <Table.Row>
@@ -924,6 +1035,64 @@ const RequestsPage = () => {
                               </Table.Body>
                             </Table.Root>
                           </Box>
+
+                          {/* Mobile: Cards */}
+                          <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
+                            {requests.map((req) => (
+                              <Box
+                                key={req._id || req.id}
+                                p={3}
+                                borderWidth="1px"
+                                borderRadius="md"
+                                bg="gray.50"
+                              >
+                                <VStack align="stretch" gap={2}>
+                                  <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                    <Text fontWeight="bold" fontSize="sm">
+                                      {getCompanyName(req.recipientCompanyId)}
+                                    </Text>
+                                    <Badge
+                                      colorPalette={
+                                        req.status === 'accepted'
+                                          ? 'green'
+                                          : req.status === 'rejected'
+                                            ? 'red'
+                                            : 'yellow'
+                                      }
+                                    >
+                                      {req.status === 'pending'
+                                        ? t('requests.statusPending') || 'Ожидание'
+                                        : req.status === 'accepted'
+                                          ? t('requests.statusAccepted') || 'Принято'
+                                          : t('requests.statusRejected') || 'Отклонено'}
+                                    </Badge>
+                                  </HStack>
+
+                                  <Box>
+                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                      {t('requests.tableResponse') || 'Ответ'}:
+                                    </Text>
+                                    <Text fontSize="sm" color="gray.700">
+                                      {req.response}
+                                    </Text>
+                                  </Box>
+
+                                  {req.responseFiles && req.responseFiles.length > 0 && (
+                                    <Box>
+                                      <Text fontSize="xs" color="gray.500" mb={1}>
+                                        {t('requests.tableResponseFiles') || 'Файлы ответа'}:
+                                      </Text>
+                                      {renderFileList(req.responseFiles)}
+                                    </Box>
+                                  )}
+
+                                  <Text fontSize="xs" color="gray.400">
+                                    {formatDate(req.respondedAt)}
+                                  </Text>
+                                </VStack>
+                              </Box>
+                            ))}
+                          </VStack>
                         </Box>
                       ))}
                     </VStack>
@@ -933,8 +1102,8 @@ const RequestsPage = () => {
                     </Box>
                   )}
                 </VStack>
-              </Tabs.Content>
-            </Box>
+              </Box>
+            </Tabs.Content>
           </Tabs.Root>
         </VStack>
       </Container>
@@ -995,7 +1164,17 @@ const RequestsPage = () => {
                     onChange={handleResponseFileSelect}
                     multiple
                     accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
+                    display="none"
                   />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => responseFileInputRef.current?.click()}
+                    gap={2}
+                  >
+                    <FiFileText />
+                    <Text>{t('requests.selectFiles') || 'Выбрать файлы'}</Text>
+                  </Button>
                   {responseFiles.length > 0 && (
                     <VStack gap={2} mt={2} align="start">
                       {responseFiles.map((file, index) => (

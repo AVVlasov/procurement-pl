@@ -160,6 +160,19 @@ export const authApi = createApi({
         },
       }),
     }),
+
+    updateProfile: builder.mutation<AuthResponse, { firstName?: string; lastName?: string; position?: string; phone?: string }>({
+      query: (data) => ({
+        url: '/profile',
+        method: 'PATCH',
+        params: { action: 'updateProfile' },
+        body: {
+          action: 'updateProfile',
+          payload: data,
+        },
+      }),
+      invalidatesTags: ['Auth'],
+    }),
   }),
 })
 
@@ -173,5 +186,6 @@ export const {
   useRefreshTokenMutation,
   useChangePasswordMutation,
   useDeleteAccountMutation,
+  useUpdateProfileMutation,
 } = authApi
 

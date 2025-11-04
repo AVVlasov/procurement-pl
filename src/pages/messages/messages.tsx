@@ -23,6 +23,7 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { useSearchCompaniesQuery } from '../../__data__/api/searchApi'
 import { useGetCompanyQuery } from '../../__data__/api/companiesApi'
+import { useToast } from '../../hooks/useToast'
 
 // Helper для работы с localStorage потоками
 const LOCAL_STORAGE_KEY = 'message_threads'
@@ -64,6 +65,7 @@ export default function MessagesPage() {
   const { t } = useTranslation('common')
   const { company } = useAuth()
   const myCompanyId = company?.id
+  const toast = useToast()
 
   const { data: apiThreads = [], refetch: refetchThreads } = useGetThreadsQuery(undefined, {
     pollingInterval: 5000,
@@ -151,6 +153,17 @@ export default function MessagesPage() {
     return grouped
   }, [allThreads, myCompanyId])
 
+  // Создаём словарь companyId -> companyName из загруженных компаний
+  const companyNamesMap = useMemo(() => {
+    const map = new Map<string, string>()
+    if (companyOptions?.companies) {
+      companyOptions.companies.forEach((company: any) => {
+        map.set(company.id, company.shortName || company.fullName || company.id)
+      })
+    }
+    return map
+  }, [companyOptions])
+
   // История компаний с которыми переписывались
   const conversationHistory = useMemo(() => {
     // Создаём Map всех потоков (API + localStorage)
@@ -163,10 +176,12 @@ export default function MessagesPage() {
       const ids = threadId.split('-').filter((id: string) => id && id !== 'thread')
       const otherCompanyId = ids.find((id: string) => id !== myCompanyId)
       if (otherCompanyId) {
+        // Получаем имя компании из словаря или используем ID
+        const companyName = companyNamesMap.get(otherCompanyId) || thread.companyName || otherCompanyId
         allThreadsMap.set(otherCompanyId, {
           companyId: otherCompanyId,
           thread,
-          companyName: thread.companyName || otherCompanyId,
+          companyName,
         })
       }
     })
@@ -174,6 +189,8 @@ export default function MessagesPage() {
     // Добавляем из localStorage (они приоритетные и имеют имя компании)
     localThreads.forEach((localThread: LocalThread) => {
       const otherCompanyId = localThread.companyId
+      // Обновляем имя из словаря, если доступно
+      const companyName = companyNamesMap.get(otherCompanyId) || localThread.companyName
       allThreadsMap.set(otherCompanyId, {
         companyId: otherCompanyId,
         thread: {
@@ -181,7 +198,7 @@ export default function MessagesPage() {
           lastMessage: localThread.lastMessage,
           lastMessageAt: localThread.lastMessageAt,
         },
-        companyName: localThread.companyName,
+        companyName,
       })
     })
 
@@ -194,7 +211,7 @@ export default function MessagesPage() {
       })
 
     return history
-  }, [apiThreads, localThreads, myCompanyId])
+  }, [apiThreads, localThreads, myCompanyId, companyNamesMap])
 
   // Фильтруем компании по поиску
   const filteredCompanies = useMemo(() => {
@@ -237,6 +254,8 @@ export default function MessagesPage() {
 
       setMessageText('')
       
+      toast.success(t('messages.sent') || 'Сообщение отправлено')
+      
       refetchThreadMessages()
       // Явный рефреш threads после отправки сообщения
       setTimeout(() => {
@@ -244,6 +263,7 @@ export default function MessagesPage() {
       }, 500)
     } catch (error) {
       console.error('Error sending message:', error)
+      toast.error(t('messages.sendError') || 'Ошибка при отправке сообщения')
     }
   }
 
@@ -497,10 +517,28 @@ export default function MessagesPage() {
                 </HStack>
               </>
             ) : (
-              <VStack flex={1} justify="center" align="center" gap={4}>
-                <Text fontSize="lg" color="gray.500">
-                  Выберите компанию для начала диалога
+              <VStack flex={1} justify="center" align="center" gap={4} p={8}>
+                <Text fontSize="lg" fontWeight="semibold" color="gray.700" textAlign="center">
+                  {t('messages.select_company') || 'Выберите компанию для начала диалога'}
                 </Text>
+                <Text fontSize="sm" color="gray.500" textAlign="center">
+                  {t('messages.select_company_hint') || 'Используйте поиск в левой панели или выберите компанию из истории переписок'}
+                </Text>
+                {!searchQuery && conversationHistory.length === 0 && (
+                  <Button
+                    colorPalette="brand"
+                    onClick={() => {
+                      const input = document.querySelector('input[placeholder="Поиск"]') as HTMLInputElement
+                      if (input) {
+                        input.focus()
+                      }
+                    }}
+                    mt={4}
+                  >
+                    <FiSearch />
+                    <Text ml={2}>{t('messages.start_search') || 'Начать поиск компаний'}</Text>
+                  </Button>
+                )}
               </VStack>
             )}
           </VStack>

@@ -463,6 +463,49 @@ router.patch('/profile', verifyToken, async (req, res) => {
       return res.status(result.status).json(result.body);
     }
 
+    if (action === 'updateProfile') {
+      await waitForDatabaseConnection();
+      
+      const { firstName, lastName, position, phone } = payload;
+      
+      if (!firstName && !lastName && !position && !phone) {
+        return res.status(400).json({ error: 'At least one field must be provided' });
+      }
+
+      const user = await User.findById(req.userId);
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      if (firstName) user.firstName = firstName;
+      if (lastName) user.lastName = lastName;
+      if (position !== undefined) user.position = position;
+      if (phone !== undefined) user.phone = phone;
+      user.updatedAt = new Date();
+
+      await user.save();
+
+      const company = user.companyId ? await Company.findById(user.companyId) : null;
+
+      return res.json({
+        message: 'Profile updated successfully',
+        user: {
+          id: user._id.toString(),
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          position: user.position,
+          phone: user.phone,
+          companyId: user.companyId?.toString()
+        },
+        company: company ? {
+          id: company._id.toString(),
+          name: company.fullName,
+          inn: company.inn
+        } : null
+      });
+    }
+
     res.json({ message: 'Profile endpoint' });
   } catch (error) {
     console.error('Profile update error:', error);

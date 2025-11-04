@@ -9,7 +9,7 @@
     "rating": "Company Rating"
   },
   "ai_recommendations": {
-    "title": "AI Partner Recommendations",
+    "title": "Partner Recommendations",
     "loading": "Loading recommendations...",
     "no_recommendations": "No recommendations yet",
     "view_details": "View Details",

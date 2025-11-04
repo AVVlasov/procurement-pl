@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { verifyToken } = require('../middleware/auth');
 const Review = require('../models/Review');
+const Company = require('../models/Company');
 
 // Функция для логирования с проверкой DEV переменной
 const log = (message, data = '') => {
@@ -11,6 +12,35 @@ const log = (message, data = '') => {
     } else {
       console.log(message);
     }
+  }
+};
+
+// Функция для пересчета рейтинга компании
+const updateCompanyRating = async (companyId) => {
+  try {
+    const reviews = await Review.find({ companyId });
+    
+    if (reviews.length === 0) {
+      await Company.findByIdAndUpdate(companyId, {
+        rating: 0,
+        reviews: 0,
+        updatedAt: new Date()
+      });
+      return;
+    }
+
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    const averageRating = totalRating / reviews.length;
+
+    await Company.findByIdAndUpdate(companyId, {
+      rating: averageRating,
+      reviews: reviews.length,
+      updatedAt: new Date()
+    });
+
+    log('[Reviews] Updated company rating:', companyId, 'New rating:', averageRating);
+  } catch (error) {
+    console.error('[Reviews] Error updating company rating:', error.message);
   }
 };
 
@@ -42,30 +72,54 @@ router.post('/', verifyToken, async (req, res) => {
 
     if (!companyId || !rating || !comment) {
       return res.status(400).json({
-        error: 'companyId, rating, and comment are required',
+        error: 'Заполните все обязательные поля: компания, рейтинг и комментарий',
       });
     }
 
     if (rating < 1 || rating > 5) {
       return res.status(400).json({
-        error: 'Rating must be between 1 and 5',
+        error: 'Рейтинг должен быть от 1 до 5',
       });
     }
 
-    if (comment.trim().length < 10 || comment.trim().length > 1000) {
+    const trimmedComment = comment.trim();
+    if (trimmedComment.length < 10) {
       return res.status(400).json({
-        error: 'Comment must be between 10 and 1000 characters',
+        error: 'Отзыв должен содержать минимум 10 символов',
+      });
+    }
+
+    if (trimmedComment.length > 1000) {
+      return res.status(400).json({
+        error: 'Отзыв не должен превышать 1000 символов',
+      });
+    }
+
+    // Получить данные пользователя из БД для актуальной информации
+    const User = require('../models/User');
+    const Company = require('../models/Company');
+    
+    const user = await User.findById(req.userId);
+    const userCompany = user && user.companyId ? await Company.findById(user.companyId) : null;
+
+    if (!user) {
+      return res.status(404).json({
+        error: 'Пользователь не найден',
       });
     }
 
     // Создать новый отзыв
     const newReview = new Review({
       companyId,
-      authorCompanyId: req.companyId,
-      authorName: req.user.firstName + ' ' + req.user.lastName,
-      authorCompany: req.user.companyName || 'Company',
+      authorCompanyId: user.companyId || req.companyId,
+      authorName: user.firstName && user.lastName 
+        ? `${user.firstName} ${user.lastName}` 
+        : req.user?.firstName && req.user?.lastName
+          ? `${req.user.firstName} ${req.user.lastName}`
+          : 'Аноним',
+      authorCompany: userCompany?.fullName || userCompany?.shortName || req.user?.companyName || 'Компания',
       rating: parseInt(rating),
-      comment: comment.trim(),
+      comment: trimmedComment,
       verified: true,
       createdAt: new Date(),
       updatedAt: new Date()
@@ -75,11 +129,14 @@ router.post('/', verifyToken, async (req, res) => {
 
     log('[Reviews] New review created:', savedReview._id);
 
+    // Пересчитываем рейтинг компании
+    await updateCompanyRating(companyId);
+
     res.status(201).json(savedReview);
   } catch (error) {
     console.error('[Reviews] Error creating review:', error.message);
     res.status(500).json({
-      error: 'Internal server error',
+      error: 'Ошибка при сохранении отзыва',
       message: error.message,
     });
   }

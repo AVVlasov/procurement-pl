@@ -75,17 +75,23 @@
     "placeholder": "Напишите сообщение...",
     "contact_company": "Связаться с компанией",
     "message_placeholder": "Напишите ваше сообщение...",
+    "sent": "Сообщение отправлено",
     "sent_successfully": "Сообщение отправлено",
+    "sendError": "Ошибка при отправке сообщения. Попробуйте еще раз",
     "no_messages": "Нет сообщений",
     "no_threads": "Нет диалогов",
     "send": "Отправить",
     "select_company": "Выберите компанию для начала диалога",
+    "select_company_hint": "Используйте поиск в левой панели или выберите компанию из истории переписок",
+    "start_search": "Начать поиск компаний",
     "find_company": "Найти компанию",
     "history": "История переписок",
     "file_uploaded": "Файл загружен",
     "file_upload_failed": "Не удалось загрузить файл",
     "file_deleted": "Файл удалён",
-    "file_delete_failed": "Не удалось удалить файл"
+    "file_delete_failed": "Не удалось удалить файл",
+    "profile_updated": "Профиль успешно обновлен",
+    "request_created": "Запрос успешно создан"
   },
   "buy": {
     "title": "Я покупаю",
@@ -97,6 +103,7 @@
     "title": "Массовые запросы",
     "recipients": "Получатели",
     "attachments": "Добавить файлы",
+    "selectFiles": "Выбрать файлы",
     "send": "Отправить",
     "result": "Результат",
     "buyDocsTitle": "Я покупаю — документы",
@@ -213,7 +220,10 @@
     "messages": {
       "saved": "Настройки сохранены",
       "languageChanged": "Язык интерфейса обновлён",
-      "noCompany": "Не удалось определить компанию. Повторите позже"
+      "noCompany": "Не удалось определить компанию. Повторите позже",
+      "notificationsUpdated": "Настройки уведомлений обновлены",
+      "emailUpdated": "Настройки email обновлены",
+      "saveError": "Ошибка при сохранении настроек"
     },
     "actions": {
       "save": "Сохранить",
@@ -243,7 +253,20 @@
       "name": "Имя пользователя",
       "email": "Email",
       "company": "Компания",
-      "unknown": "Не указано"
+      "position": "Должность",
+      "phone": "Телефон",
+      "unknown": "Не указано",
+      "editTitle": "Редактировать профиль",
+      "firstName": "Имя",
+      "lastName": "Фамилия",
+      "firstNamePlaceholder": "Введите имя",
+      "lastNamePlaceholder": "Введите фамилию",
+      "positionPlaceholder": "Введите должность",
+      "phonePlaceholder": "Введите телефон",
+      "updateError": "Ошибка при обновлении профиля",
+      "validation": {
+        "required": "Имя и фамилия обязательны для заполнения"
+      }
     },
     "notifications": {
       "title": "Уведомления",

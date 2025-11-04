@@ -49,6 +49,12 @@ const companySchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  metrics: {
+    type: {
+      profileViews: { type: Number, default: 0 }
+    },
+    default: {}
+  },
   createdAt: {
     type: Date,
     default: Date.now

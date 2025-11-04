@@ -65,21 +65,19 @@ export const SearchPage = () => {
   } = useSearchCompaniesQuery(
     { ...filters, query: searchQuery.trim() },
     {
-      skip: !searchQuery.trim() && !hasActiveFilters,
+      skip: !searchQuery.trim() && !hasActiveFilters, // Пропускаем только если нет ни текста, ни фильтров
     }
   )
 
-  // Переводим запрос при изменении фильтров
+  // Переводим запрос при изменении фильтров или текста
   useEffect(() => {
-    if (searchQuery.trim() || hasActiveFilters) {
-      // Небольшая задержка, чтобы дать RTK Query время обработать новые параметры,
-      // затем явно вызываем refetch
-      const timer = setTimeout(() => {
-        refetch()
-      }, 50)
-      return () => clearTimeout(timer)
-    }
-  }, [filters.industries, filters.companySize, filters.geography, filters.minRating, filters.hasReviews, filters.hasAcceptedDocs, refetch, searchQuery, hasActiveFilters])
+    // Небольшая задержка, чтобы дать RTK Query время обработать новые параметры,
+    // затем явно вызываем refetch
+    const timer = setTimeout(() => {
+      refetch()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [filters.industries, filters.companySize, filters.geography, filters.minRating, filters.hasReviews, filters.hasAcceptedDocs, filters.page, filters.sortBy, filters.sortOrder, refetch, searchQuery])
 
   const [addToFavorites] = useAddToFavoritesMutation()
   const [removeFromFavorites] = useRemoveFromFavoritesMutation()

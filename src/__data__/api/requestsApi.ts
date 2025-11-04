@@ -75,7 +75,7 @@ export interface RespondToRequestPayload {
 export const requestsApi = createApi({
   reducerPath: 'requestsApi',
   baseQuery: baseQuery,
-  tagTypes: ['Requests'],
+  tagTypes: ['Requests', 'Stats'],
   endpoints: (builder) => ({
     sendBulkRequest: builder.mutation<BulkRequestResponse, SendBulkRequestPayload>({
       query: ({ text, subject, recipientCompanyIds, productId, files }) => {
@@ -94,7 +94,7 @@ export const requestsApi = createApi({
           body,
         }
       },
-      invalidatesTags: ['Requests'],
+      invalidatesTags: ['Requests', 'Stats'],
     }),
     getSentRequests: builder.query<Request[], void>({
       query: () => '/requests/sent',
@@ -119,14 +119,14 @@ export const requestsApi = createApi({
           body,
         }
       },
-      invalidatesTags: ['Requests'],
+      invalidatesTags: ['Requests', 'Stats'],
     }),
     deleteRequest: builder.mutation<{ message: string }, string>({
       query: (id) => ({
         url: `/requests/${id}`,
         method: 'DELETE',
       }),
-      invalidatesTags: ['Requests'],
+      invalidatesTags: ['Requests', 'Stats'],
     }),
   }),
 })

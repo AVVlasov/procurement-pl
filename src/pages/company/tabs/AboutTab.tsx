@@ -73,9 +73,10 @@ export const AboutTab = ({ companyId, isOwnCompany }: { companyId?: string; isOw
         },
       }).unwrap()
       
-      toast.success(t('common:labels.success'))
+      toast.success(t('common:messages.profile_updated') || 'Профиль успешно обновлен')
       setIsEditing(false)
     } catch (error) {
+      console.error('[AboutTab] updateCompany error:', error)
       toast.error(t('common:errors.server_error'))
     }
   }

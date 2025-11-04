@@ -38,7 +38,7 @@ export interface CreateReviewPayload {
 export const reviewsApi = createApi({
   reducerPath: 'reviewsApi',
   baseQuery: baseQuery,
-  tagTypes: ['Reviews'],
+  tagTypes: ['Reviews', 'Stats', 'Company'],
   endpoints: (builder) => ({
     getCompanyReviews: builder.query<Review[], string | undefined>({
       query: (companyId) => {
@@ -57,7 +57,11 @@ export const reviewsApi = createApi({
         method: 'POST',
         body: payload,
       }),
-      invalidatesTags: (result, error, payload) => [{ type: 'Reviews', id: payload.companyId }],
+      invalidatesTags: (result, error, payload) => [
+        { type: 'Reviews', id: payload.companyId },
+        { type: 'Company', id: payload.companyId },
+        'Stats'
+      ],
     }),
   }),
 })

@@ -10,38 +10,54 @@ import {
   Field,
   Dialog,
   Input,
-  Textarea,
-  Checkbox,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { FiSettings, FiSave, FiUser, FiBell, FiShield } from 'react-icons/fi'
+import { FiSettings, FiUser, FiBell, FiShield, FiEdit } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { useAuth } from '../../hooks/useAuth'
-import { useCreateExperienceMutation } from '../../__data__/api/experienceApi'
-import { useChangePasswordMutation, useDeleteAccountMutation } from '../../__data__/api/authApi'
+import { useChangePasswordMutation, useDeleteAccountMutation, useUpdateProfileMutation } from '../../__data__/api/authApi'
 import { useToast } from '../../hooks/useToast'
 import { PasswordInput } from '../../components/ui/password-input'
+import { useDispatch } from 'react-redux'
+import { updateUser } from '../../__data__/slices/authSlice'
 
 const SettingsPage = () => {
   const { t, i18n } = useTranslation('common')
   const navigate = useNavigate()
+  const dispatch = useDispatch()
   const { user, company, logout } = useAuth()
   const userEmail = user?.email || ''
   const companyId = company?.id
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true)
-  const [emailUpdatesEnabled, setEmailUpdatesEnabled] = useState(false)
+  
+  // Загружаем настройки уведомлений из localStorage
+  const loadNotificationSettings = () => {
+    try {
+      const saved = localStorage.getItem('notificationSettings')
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        return {
+          notifications: parsed.notificationsEnabled !== false,
+          email: parsed.emailUpdatesEnabled === true,
+        }
+      }
+    } catch (e) {
+      console.error('Error loading notification settings:', e)
+    }
+    return { notifications: true, email: false }
+  }
+  
+  const [notificationsEnabled, setNotificationsEnabled] = useState(loadNotificationSettings().notifications)
+  const [emailUpdatesEnabled, setEmailUpdatesEnabled] = useState(loadNotificationSettings().email)
   const [language, setLanguage] = useState(i18n.language)
-  const [createExperienceOpen, setCreateExperienceOpen] = useState(false)
+  const [editProfileOpen, setEditProfileOpen] = useState(false)
   const [changePasswordOpen, setChangePasswordOpen] = useState(false)
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false)
-  const [experienceForm, setExperienceForm] = useState({
-    confirmed: false,
-    customer: '',
-    subject: '',
-    volume: '',
-    contact: '',
-    comment: '',
+  const [profileForm, setProfileForm] = useState({
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    position: user?.position || '',
+    phone: user?.phone || '',
   })
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: '',
@@ -52,7 +68,7 @@ const SettingsPage = () => {
     password: '',
     confirmation: '',
   })
-  const [createExperience, { isLoading: isCreatingExperience }] = useCreateExperienceMutation()
+  const [updateProfile, { isLoading: isUpdatingProfile }] = useUpdateProfileMutation()
   const [changePassword, { isLoading: isChangingPassword }] = useChangePasswordMutation()
   const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteAccountMutation()
   const { success: showSuccess, error: showError, warning: showWarning } = useToast()
@@ -65,34 +81,48 @@ const SettingsPage = () => {
 
   const handleToggleNotifications = (checked: boolean) => {
     setNotificationsEnabled(checked)
+    try {
+      const current = loadNotificationSettings()
+      localStorage.setItem('notificationSettings', JSON.stringify({
+        notificationsEnabled: checked,
+        emailUpdatesEnabled: current.email,
+      }))
+      showSuccess(t('settings.messages.notificationsUpdated'))
+    } catch (e) {
+      console.error('Error saving notification settings:', e)
+    }
   }
 
   const handleToggleEmailUpdates = (checked: boolean) => {
     setEmailUpdatesEnabled(checked)
+    try {
+      const current = loadNotificationSettings()
+      localStorage.setItem('notificationSettings', JSON.stringify({
+        notificationsEnabled: current.notifications,
+        emailUpdatesEnabled: checked,
+      }))
+      showSuccess(t('settings.messages.emailUpdated'))
+    } catch (e) {
+      console.error('Error saving email settings:', e)
+    }
   }
 
-  const handleResetExperienceForm = () => {
-    setExperienceForm({ confirmed: false, customer: '', subject: '', volume: '', contact: '', comment: '' })
-  }
-
-  const handleSaveSettings = () => {
-    showSuccess(t('settings.messages.saved'))
-  }
-
-  const handleCreateExperience = async () => {
-    if (!companyId) {
-      showError(t('settings.messages.noCompany'))
+  const handleUpdateProfile = async () => {
+    if (!profileForm.firstName || !profileForm.lastName) {
+      showWarning(t('settings.profile.validation.required'))
       return
     }
 
     try {
-      await createExperience({ companyId, data: experienceForm }).unwrap()
-      showSuccess(t('settings.experience.success'))
-      setCreateExperienceOpen(false)
-      handleResetExperienceForm()
+      const result = await updateProfile(profileForm).unwrap()
+      if (result.user) {
+        dispatch(updateUser(result.user))
+      }
+      showSuccess(t('messages.profile_updated'))
+      setEditProfileOpen(false)
     } catch (err) {
-      console.error('[SettingsPage] createExperience error:', err)
-      showError(t('settings.experience.error'))
+      console.error('[SettingsPage] updateProfile error:', err)
+      showError(t('settings.profile.updateError'))
     }
   }
 
@@ -146,38 +176,40 @@ const SettingsPage = () => {
     }
   }
 
-  const experienceTitle = company?.name || t('settings.experience.defaultCompanyTitle')
-
   return (
     <MainLayout>
       <Box>
-        <HStack mb={6} justify="space-between">
+        <HStack mb={6}>
           <Text fontSize="2xl" fontWeight="bold">
             {t('nav.settings')}
           </Text>
-          <Button colorPalette="blue" size="sm" onClick={handleSaveSettings}>
-            <FiSave />
-            <Text ml={2}>{t('settings.actions.save')}</Text>
-          </Button>
         </HStack>
 
         <VStack gap={6} align="stretch">
-          <Box bg="white" p={6} borderRadius="lg" shadow="sm" borderWidth="1px" borderColor="gray.200">
-            <HStack mb={4} justify="space-between">
-              <Text fontWeight="semibold">{t('settings.experience.title')}</Text>
-              <Button colorPalette="green" size="sm" onClick={() => setCreateExperienceOpen(true)}>
-                {t('settings.experience.add')}
-              </Button>
-            </HStack>
-            <Text fontSize="sm" color="gray.600">
-              {t('settings.experience.description', { company: experienceTitle })}
-            </Text>
-          </Box>
 
           <Box bg="white" p={6} borderRadius="lg" shadow="sm" borderWidth="1px" borderColor="gray.200">
-            <HStack mb={4}>
-              <FiUser />
-              <Text fontWeight="semibold">{t('settings.profile.title')}</Text>
+            <HStack mb={4} justify="space-between">
+              <HStack>
+                <FiUser />
+                <Text fontWeight="semibold">{t('settings.profile.title')}</Text>
+              </HStack>
+              <Button 
+                colorPalette="blue" 
+                size="sm" 
+                variant="outline"
+                onClick={() => {
+                  setProfileForm({
+                    firstName: user?.firstName || '',
+                    lastName: user?.lastName || '',
+                    position: user?.position || '',
+                    phone: user?.phone || '',
+                  })
+                  setEditProfileOpen(true)
+                }}
+              >
+                <FiEdit />
+                <Text ml={2}>{t('buttons.edit')}</Text>
+              </Button>
             </HStack>
             <VStack gap={4} align="stretch">
               <HStack justify="space-between">
@@ -192,6 +224,18 @@ const SettingsPage = () => {
                 <Text>{t('settings.profile.company')}</Text>
                 <Text fontWeight="medium">{company?.name || t('settings.profile.unknown')}</Text>
               </HStack>
+              {user?.position && (
+                <HStack justify="space-between">
+                  <Text>{t('settings.profile.position')}</Text>
+                  <Text fontWeight="medium">{user.position}</Text>
+                </HStack>
+              )}
+              {user?.phone && (
+                <HStack justify="space-between">
+                  <Text>{t('settings.profile.phone')}</Text>
+                  <Text fontWeight="medium">{user.phone}</Text>
+                </HStack>
+              )}
             </VStack>
           </Box>
 
@@ -267,59 +311,56 @@ const SettingsPage = () => {
         </VStack>
       </Box>
 
-      <Dialog.Root open={createExperienceOpen} onOpenChange={(details) => {
-        if (!details.open) {
-          handleResetExperienceForm()
-        }
-        setCreateExperienceOpen(details.open)
-      }}>
+      <Dialog.Root open={editProfileOpen} onOpenChange={(details) => setEditProfileOpen(details.open)}>
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>{t('settings.experience.modal.title')}</Dialog.Title>
+              <Dialog.Title>{t('settings.profile.editTitle')}</Dialog.Title>
               <Dialog.CloseTrigger />
             </Dialog.Header>
             <Dialog.Body>
               <VStack gap={4} align="stretch">
-                <Field.Root>
-                  <Checkbox.Root
-                    checked={experienceForm.confirmed}
-                    onCheckedChange={(details) => setExperienceForm((prev) => ({ ...prev, confirmed: Boolean(details.checked) }))}
-                  >
-                    <Checkbox.HiddenInput />
-                    <Checkbox.Control />
-                    <Checkbox.Label>{t('settings.experience.modal.confirmed')}</Checkbox.Label>
-                  </Checkbox.Root>
+                <Field.Root required>
+                  <Field.Label>{t('settings.profile.firstName')}</Field.Label>
+                  <Input 
+                    value={profileForm.firstName} 
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, firstName: event.target.value }))} 
+                    placeholder={t('settings.profile.firstNamePlaceholder')}
+                  />
                 </Field.Root>
                 <Field.Root required>
-                  <Field.Label>{t('settings.experience.modal.customer')}</Field.Label>
-                  <Input value={experienceForm.customer} onChange={(event) => setExperienceForm((prev) => ({ ...prev, customer: event.target.value }))} />
-                </Field.Root>
-                <Field.Root required>
-                  <Field.Label>{t('settings.experience.modal.subject')}</Field.Label>
-                  <Input value={experienceForm.subject} onChange={(event) => setExperienceForm((prev) => ({ ...prev, subject: event.target.value }))} />
-                </Field.Root>
-                <Field.Root>
-                  <Field.Label>{t('settings.experience.modal.volume')}</Field.Label>
-                  <Input value={experienceForm.volume} onChange={(event) => setExperienceForm((prev) => ({ ...prev, volume: event.target.value }))} />
+                  <Field.Label>{t('settings.profile.lastName')}</Field.Label>
+                  <Input 
+                    value={profileForm.lastName} 
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, lastName: event.target.value }))} 
+                    placeholder={t('settings.profile.lastNamePlaceholder')}
+                  />
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label>{t('settings.experience.modal.contact')}</Field.Label>
-                  <Input value={experienceForm.contact} onChange={(event) => setExperienceForm((prev) => ({ ...prev, contact: event.target.value }))} />
+                  <Field.Label>{t('settings.profile.position')}</Field.Label>
+                  <Input 
+                    value={profileForm.position} 
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, position: event.target.value }))} 
+                    placeholder={t('settings.profile.positionPlaceholder')}
+                  />
                 </Field.Root>
                 <Field.Root>
-                  <Field.Label>{t('settings.experience.modal.comment')}</Field.Label>
-                  <Textarea value={experienceForm.comment} onChange={(event) => setExperienceForm((prev) => ({ ...prev, comment: event.target.value }))} rows={4} />
+                  <Field.Label>{t('settings.profile.phone')}</Field.Label>
+                  <Input 
+                    value={profileForm.phone} 
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, phone: event.target.value }))} 
+                    placeholder={t('settings.profile.phonePlaceholder')}
+                  />
                 </Field.Root>
               </VStack>
             </Dialog.Body>
             <Dialog.Footer>
-              <Button variant="ghost" onClick={() => setCreateExperienceOpen(false)}>
+              <Button variant="ghost" onClick={() => setEditProfileOpen(false)}>
                 {t('settings.actions.cancel')}
               </Button>
-              <Button colorPalette="green" onClick={handleCreateExperience} loading={isCreatingExperience}>
-                {t('settings.actions.save')}
+              <Button colorPalette="blue" onClick={handleUpdateProfile} loading={isUpdatingProfile}>
+                {t('buttons.save')}
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

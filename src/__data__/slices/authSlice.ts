@@ -189,9 +189,20 @@ const authSlice = createSlice({
     clearError: (state) => {
       state.error = null
     },
+    
+    updateUser: (state, action: PayloadAction<Partial<AuthResponse['user']>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload }
+        
+        // Update localStorage
+        if (typeof window !== 'undefined') {
+          storageUtils.setString('user', JSON.stringify(state.user))
+        }
+      }
+    },
   },
 })
 
-export const { setCredentials, setTokens, logout, setLoading, setError, clearError } = authSlice.actions
+export const { setCredentials, setTokens, logout, setLoading, setError, clearError, updateUser } = authSlice.actions
 export default authSlice.reducer
 
