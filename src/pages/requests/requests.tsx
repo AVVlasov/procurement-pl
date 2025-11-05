@@ -87,7 +87,7 @@ const RequestsPage = () => {
     }
 
     return new Map(
-      companyOptions.companies.map((company: any) => [
+      companyOptions.companies.map((company: { id: string; shortName?: string; fullName?: string }) => [
         company.id,
         { name: company.shortName || company.fullName || company.id },
       ]),
@@ -100,7 +100,11 @@ const RequestsPage = () => {
     }
 
     return productAcceptances
-      .map((acceptance: any) => {
+      .map((acceptance: {
+        companyId?:
+          | string
+          | { _id?: { toString: () => string }; shortName?: string; fullName?: string }
+      }) => {
         if (!acceptance?.companyId) {
           return null
         }
@@ -134,7 +138,7 @@ const RequestsPage = () => {
       return []
     }
 
-    return companyOptions.companies.map((company: any) => ({
+    return companyOptions.companies.map((company: { id: string; shortName?: string; fullName?: string }) => ({
       id: company.id,
       name: company.shortName || company.fullName || company.id,
       source: 'all' as const,
@@ -261,7 +265,12 @@ const RequestsPage = () => {
 
     if (respondingRequest?.response) {
       setResponseText(respondingRequest.response)
-      setResponseStatus(respondingRequest.status || 'accepted')
+      const status = respondingRequest.status
+      if (status === 'accepted' || status === 'rejected') {
+        setResponseStatus(status)
+      } else {
+        setResponseStatus('accepted')
+      }
     } else {
       setResponseText('')
       setResponseStatus('accepted')
@@ -347,12 +356,12 @@ const RequestsPage = () => {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
-    } catch (error) {
+    } catch (_error) {
       showToast.error(t('requests.fileDownloadError') || 'Ошибка при скачивании файла')
     }
   }
 
-  const renderFileList = (files?: RequestFile[], requestId?: string, isResponseFiles?: boolean) => {
+  const renderFileList = (files?: RequestFile[], requestId?: string, _isResponseFiles?: boolean) => {
     if (!files || files.length === 0) {
       return (
         <Text fontSize="xs" color="gray.500">
@@ -371,32 +380,37 @@ const RequestsPage = () => {
                 key={file.id}
                 onClick={() => handleDownloadResponseFile(requestId, file.id, file.name)}
                 size="sm"
-                variant="link"
+                variant="ghost"
                 colorPalette="brand"
                 gap={2}
               >
                 <FiDownload />
-                <Text>{file.name}</Text>
+                {file.name}
               </Button>
             )
           }
           
           // Если нет requestId, используем обычную ссылку (не должно происходить)
           return (
-            <Button
+            <a
               key={file.id}
-              as="a"
               href={file.url}
               target="_blank"
               rel="noopener noreferrer"
-              size="sm"
-              variant="link"
-              colorPalette="brand"
-              gap={2}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                fontSize: '0.875rem',
+                color: 'var(--chakra-colors-brand-500)',
+                textDecoration: 'none',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
               <FiDownload />
-              <Text>{file.name}</Text>
-            </Button>
+              {file.name}
+            </a>
           )
         })}
       </VStack>
@@ -437,7 +451,7 @@ const RequestsPage = () => {
     }
     try {
       return new Date(value).toLocaleDateString('ru-RU')
-    } catch (error) {
+    } catch (_error) {
       return value
     }
   }
@@ -454,191 +468,554 @@ const RequestsPage = () => {
             colorPalette="brand"
             variant="enclosed"
           >
-            <Tabs.List flexWrap="wrap">
-              <Tabs.Trigger value="sent" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
-                {t('requests.sentTab') || 'Запросы направленные'}
-              </Tabs.Trigger>
-              <Tabs.Trigger value="received" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
-                {t('requests.receivedTab') || 'Запросы полученные'}
-              </Tabs.Trigger>
-              <Tabs.Trigger value="responses" fontSize={{ base: 'xs', md: 'sm' }} px={{ base: 2, md: 4 }}>
-                {t('requests.responsesTab') || 'Ответы на запросы'}
-              </Tabs.Trigger>
-            </Tabs.List>
+            <Box css={{ "& [role='tablist']": { flexWrap: 'wrap' } }}>
+              {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+              <Tabs.List>
+                {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+                <Tabs.Trigger value="sent" css={{ fontSize: { base: 'xs', md: 'sm' }, px: { base: 2, md: 4 } }}>
+                  {t('requests.sentTab') || 'Запросы направленные'}
+                </Tabs.Trigger>
+                {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+                <Tabs.Trigger value="received" css={{ fontSize: { base: 'xs', md: 'sm' }, px: { base: 2, md: 4 } }}>
+                  {t('requests.receivedTab') || 'Запросы полученные'}
+                </Tabs.Trigger>
+                {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+                <Tabs.Trigger value="responses" css={{ fontSize: { base: 'xs', md: 'sm' }, px: { base: 2, md: 4 } }}>
+                  {t('requests.responsesTab') || 'Ответы на запросы'}
+                </Tabs.Trigger>
+              </Tabs.List>
+            </Box>
 
-            <Tabs.Content value="sent">
-              <Box pt={6}>
-                <VStack gap={6} align="stretch">
-                  <VStack align="stretch" gap={4} borderWidth="1px" borderRadius="lg" bg="white" p={{ base: 3, md: 4 }}>
-                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.newRequest') || 'Отправить новый запрос'}</Text>
+            <Box css={{ "& [role='tabpanel'][data-selected]": { pt: 6 } }}>
+              {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+              <Tabs.Content value="sent">
+                <Box>
+                  <VStack gap={6} align="stretch">
+                    <VStack align="stretch" gap={4} borderWidth="1px" borderRadius="lg" bg="white" p={{ base: 3, md: 4 }}>
+                      <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.newRequest') || 'Отправить новый запрос'}</Text>
 
-                    <Field.Root required>
-                      <Field.Label>{t('requests.product') || 'Выберите товар'}</Field.Label>
-                      <NativeSelect.Root size="md">
-                        <NativeSelect.Field
-                          value={selectedProductId}
-                          onChange={(event) => {
-                            setSelectedProductId(event.target.value)
-                            setSelectedRecipients([])
-                          }}
-                        >
-                          <option value="">{t('requests.productPlaceholder') || 'Выберите товар из списка'}</option>
-                          {products.map((product: any) => (
-                            <option key={product._id} value={product._id}>
-                              {product.name}
-                            </option>
-                          ))}
-                        </NativeSelect.Field>
-                        <NativeSelect.Indicator />
-                      </NativeSelect.Root>
-                      {isLoadingAcceptances && (
-                        <HStack gap={2} mt={2} color="gray.500" fontSize="xs">
-                          <Spinner size="xs" />
-                          <Text>{t('requests.acceptancesLoading') || 'Загружаем акцептовавшие компании...'}</Text>
-                        </HStack>
-                      )}
-                    </Field.Root>
-
-                    <Field.Root required>
-                      <Field.Label>{t('requests.text') || 'Текст запроса'}</Field.Label>
-                      <Textarea
-                        value={requestText}
-                        onChange={(event) => setRequestText(event.target.value)}
-                        placeholder={t('requests.textPlaceholder') || 'Введите текст запроса'}
-                        minH="100px"
-                      />
-                    </Field.Root>
-
-                    {selectedProduct && selectedProduct.files.length > 0 && (
-                      <Field.Root>
-                        <Field.Label>{t('requests.productFiles') || 'Файлы товара'}</Field.Label>
-                        <VStack gap={2} mt={2} align="start">
-                          {selectedProduct.files.map((file) => (
-                            <HStack key={file.id} gap={2} fontSize="sm" color="gray.600">
-                              <FiFileText />
-                              <Text>{file.name}</Text>
-                              <Text color="gray.400">({(file.size / 1024).toFixed(1)} KB)</Text>
-                            </HStack>
-                          ))}
-                        </VStack>
+                      <Field.Root required>
+                        <Box as={Field.Label}>{t('requests.product') || 'Выберите товар'}</Box>
+                        <NativeSelect.Root size="md">
+                          <NativeSelect.Field
+                            value={selectedProductId}
+                            onChange={(event) => {
+                              setSelectedProductId(event.target.value)
+                              setSelectedRecipients([])
+                            }}
+                          >
+                            <option value="">{t('requests.productPlaceholder') || 'Выберите товар из списка'}</option>
+                            {products.map((product: { _id: string; name: string }) => (
+                              <option key={product._id} value={product._id}>
+                                {product.name}
+                              </option>
+                            ))}
+                          </NativeSelect.Field>
+                          <NativeSelect.Indicator />
+                        </NativeSelect.Root>
+                        {isLoadingAcceptances && (
+                          <HStack gap={2} mt={2} color="gray.500" fontSize="xs">
+                            <Spinner size="xs" />
+                            <Text>{t('requests.acceptancesLoading') || 'Загружаем акцептовавшие компании...'}</Text>
+                          </HStack>
+                        )}
                       </Field.Root>
-                    )}
 
-                    <VStack align="stretch" gap={3} borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
-                      <HStack justify="space-between" align="center">
-                        <Text fontWeight="semibold" fontSize="sm">
-                          {t('requests.recipients') || 'Получатели'}
-                        </Text>
-                        <Badge colorPalette="purple" fontSize="xs">
-                          {t('requests.recipientsCount', { count: selectedRecipients.length })
-                            || `Выбрано: ${selectedRecipients.length}`}
-                        </Badge>
-                      </HStack>
+                      <Field.Root required>
+                        <Box as={Field.Label}>{t('requests.text') || 'Текст запроса'}</Box>
+                        <Textarea
+                          value={requestText}
+                          onChange={(event) => setRequestText(event.target.value)}
+                          placeholder={t('requests.textPlaceholder') || 'Введите текст запроса'}
+                          minH="100px"
+                        />
+                      </Field.Root>
 
-                      <Input
-                        value={recipientSearch}
-                        onChange={(event) => setRecipientSearch(event.target.value)}
-                        placeholder={t('requests.recipientsSearch') || 'Поиск компаний'}
-                        size="sm"
-                      />
-
-                      {combinedRecipients.length === 0 ? (
-                        <Text fontSize="xs" color="gray.500">
-                          {t('requests.noRecipients') || 'Компании не найдены. Попробуйте изменить фильтры или запрос.'}
-                        </Text>
-                      ) : (
-                        <VStack align="stretch" gap={2} maxH="240px" overflowY="auto" pr={1}>
-                          {combinedRecipients.map((option) => {
-                            const isSelected = selectedRecipients.includes(option.id)
-                            const badgeColor = option.source === 'acceptance' ? 'green' : option.source === 'ai' ? 'orange' : 'gray'
-
-                            return (
-                              <Box key={option.id} borderWidth="1px" borderRadius="md" p={2} bg={isSelected ? 'blue.50' : 'white'}>
-                                <Checkbox.Root
-                                  checked={isSelected}
-                                  onCheckedChange={(details) => toggleRecipient(option.id, details.checked)}
-                                >
-                                  <Checkbox.HiddenInput />
-                                  <Checkbox.Control />
-                                  <HStack justify="space-between" gap={3} flexWrap="wrap">
-                                    <Checkbox.Label cursor="pointer" fontWeight="medium">
-                                      {option.name}
-                                    </Checkbox.Label>
-                                    <Badge colorPalette={badgeColor} fontSize="10px">
-                                      {option.source === 'acceptance'
-                                        ? t('requests.recipientAcceptance') || 'Акцепт'
-                                        : option.source === 'ai'
-                                          ? t('requests.recipientAi') || 'ИИ'
-                                          : t('requests.recipientAll') || 'Каталог'}
-                                    </Badge>
-                                  </HStack>
-                                </Checkbox.Root>
-                                {option.description && (
-                                  <Text fontSize="xs" color="gray.500" mt={1}>
-                                    {option.description}
-                                  </Text>
-                                )}
-                              </Box>
-                            )
-                          })}
-                        </VStack>
+                      {selectedProduct && selectedProduct.files.length > 0 && (
+                        <Field.Root>
+                          <Box as={Field.Label}>{t('requests.productFiles') || 'Файлы товара'}</Box>
+                          <VStack gap={2} mt={2} align="start">
+                            {selectedProduct.files.map((file) => (
+                              <HStack key={file.id} gap={2} fontSize="sm" color="gray.600">
+                                <FiFileText />
+                                <Text>{file.name}</Text>
+                                <Text color="gray.400">({(file.size / 1024).toFixed(1)} KB)</Text>
+                              </HStack>
+                            ))}
+                          </VStack>
+                        </Field.Root>
                       )}
-                    </VStack>
 
-                    <HStack>
-                      <Button
-                        colorPalette="green"
-                        onClick={handleSendRequest}
-                        disabled={
-                          isSending
+                      <VStack align="stretch" gap={3} borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
+                        <HStack justify="space-between" align="center">
+                          <Text fontWeight="semibold" fontSize="sm">
+                            {t('requests.recipients') || 'Получатели'}
+                          </Text>
+                          <Badge colorPalette="purple" fontSize="xs">
+                            {t('requests.recipientsCount', { count: selectedRecipients.length })
+                            || `Выбрано: ${selectedRecipients.length}`}
+                          </Badge>
+                        </HStack>
+
+                        <Input
+                          value={recipientSearch}
+                          onChange={(event) => setRecipientSearch(event.target.value)}
+                          placeholder={t('requests.recipientsSearch') || 'Поиск компаний'}
+                          size="sm"
+                        />
+
+                        {combinedRecipients.length === 0 ? (
+                          <Text fontSize="xs" color="gray.500">
+                            {t('requests.noRecipients') || 'Компании не найдены. Попробуйте изменить фильтры или запрос.'}
+                          </Text>
+                        ) : (
+                          <VStack align="stretch" gap={2} maxH="240px" overflowY="auto" pr={1}>
+                            {combinedRecipients.map((option) => {
+                              const isSelected = selectedRecipients.includes(option.id)
+                              const badgeColor = option.source === 'acceptance' ? 'green' : option.source === 'ai' ? 'orange' : 'gray'
+
+                              return (
+                                <Box key={option.id} borderWidth="1px" borderRadius="md" p={2} bg={isSelected ? 'blue.50' : 'white'}>
+                                  <Checkbox.Root
+                                    checked={isSelected}
+                                    onCheckedChange={(details) => toggleRecipient(option.id, details.checked)}
+                                  >
+                                    <Checkbox.HiddenInput />
+                                    <Checkbox.Control />
+                                    <HStack justify="space-between" gap={3} flexWrap="wrap">
+                                      <Box as={Checkbox.Label} cursor="pointer" fontWeight="medium">
+                                        {option.name}
+                                      </Box>
+                                      <Badge colorPalette={badgeColor} fontSize="10px">
+                                        {option.source === 'acceptance'
+                                          ? t('requests.recipientAcceptance') || 'Акцепт'
+                                          : option.source === 'ai'
+                                            ? t('requests.recipientAi') || 'ИИ'
+                                            : t('requests.recipientAll') || 'Каталог'}
+                                      </Badge>
+                                    </HStack>
+                                  </Checkbox.Root>
+                                  {option.description && (
+                                    <Text fontSize="xs" color="gray.500" mt={1}>
+                                      {option.description}
+                                    </Text>
+                                  )}
+                                </Box>
+                              )
+                            })}
+                          </VStack>
+                        )}
+                      </VStack>
+
+                      <HStack>
+                        <Button
+                          colorPalette="green"
+                          onClick={handleSendRequest}
+                          disabled={
+                            isSending
                           || !requestText.trim()
                           || !selectedProductId
                           || selectedRecipients.length === 0
                           || selectedRecipients.length > MAX_RECIPIENTS
-                        }
-                        loading={isSending}
+                          }
+                          loading={isSending}
+                          gap={2}
+                          size={{ base: 'sm', md: 'md' }}
+                          w={{ base: 'full', md: 'auto' }}
+                        >
+                          <FiSend />
+                          <Text>{t('requests.sendButton') || 'Отправить запрос'}</Text>
+                        </Button>
+                      </HStack>
+                    </VStack>
+
+                    <VStack gap={4} align="stretch">
+                      <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.sentHistory') || 'История отправленных запросов'}</Text>
+                      {groupedSentRequests.length > 0 ? (
+                        <VStack align="stretch" gap={4}>
+                          {groupedSentRequests.map(([groupSubject, requests]) => (
+                            <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={{ base: 3, md: 4 }} bg="white" overflow="hidden">
+                              <Heading size={{ base: 'xs', md: 'sm' }} mb={3}>
+                                {groupSubject}
+                              </Heading>
+                            
+                              {/* Desktop: Table */}
+                              <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" mx={-4} mb={-4}>
+                                <Table.Root variant="line">
+                                  <Table.Header>
+                                    <Table.Row>
+                                      <Table.ColumnHeader>{t('requests.tableCompany') || 'Компания'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableResponse') || 'Ответ'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
+                                      <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
+                                    </Table.Row>
+                                  </Table.Header>
+                                  <Table.Body>
+                                    {requests.map((req) => (
+                                      <Table.Row key={req._id || req.id}>
+                                        <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
+                                        <Table.Cell fontSize="sm" color="gray.600">
+                                          {req.text}
+                                        </Table.Cell>
+                                        <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
+                                        <Table.Cell>
+                                          <Badge
+                                            colorPalette={
+                                              req.status === 'accepted'
+                                                ? 'green'
+                                                : req.status === 'rejected'
+                                                  ? 'red'
+                                                  : 'yellow'
+                                            }
+                                          >
+                                            {req.status === 'pending'
+                                              ? t('requests.statusPending') || 'Ожидание'
+                                              : req.status === 'accepted'
+                                                ? t('requests.statusAccepted') || 'Принято'
+                                                : t('requests.statusRejected') || 'Отклонено'}
+                                          </Badge>
+                                        </Table.Cell>
+                                        <Table.Cell fontSize="sm" color="gray.600">
+                                          {req.response || '-'}
+                                        </Table.Cell>
+                                        <Table.Cell fontSize="xs" color="gray.400">
+                                          {formatDate(req.createdAt)}
+                                        </Table.Cell>
+                                        <Table.Cell>
+                                          <Button
+                                            size="xs"
+                                            variant="outline"
+                                            colorPalette="red"
+                                            onClick={() => handleDeleteRequest(req._id || req.id || '')}
+                                            gap={2}
+                                          >
+                                            <FiTrash2 />
+                                            <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
+                                          </Button>
+                                        </Table.Cell>
+                                      </Table.Row>
+                                    ))}
+                                  </Table.Body>
+                                </Table.Root>
+                              </Box>
+
+                              {/* Mobile: Cards */}
+                              <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
+                                {requests.map((req) => (
+                                  <Box
+                                    key={req._id || req.id}
+                                    p={3}
+                                    borderWidth="1px"
+                                    borderRadius="md"
+                                    bg="gray.50"
+                                  >
+                                    <VStack align="stretch" gap={2}>
+                                      <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                        <Text fontWeight="bold" fontSize="sm">
+                                          {getCompanyName(req.recipientCompanyId)}
+                                        </Text>
+                                        <Badge
+                                          colorPalette={
+                                            req.status === 'accepted'
+                                              ? 'green'
+                                              : req.status === 'rejected'
+                                                ? 'red'
+                                                : 'yellow'
+                                          }
+                                        >
+                                          {req.status === 'pending'
+                                            ? t('requests.statusPending') || 'Ожидание'
+                                            : req.status === 'accepted'
+                                              ? t('requests.statusAccepted') || 'Принято'
+                                              : t('requests.statusRejected') || 'Отклонено'}
+                                        </Badge>
+                                      </HStack>
+
+                                      <Box>
+                                        <Text fontSize="xs" color="gray.500" mb={1}>
+                                          {t('requests.tableText') || 'Текст'}:
+                                        </Text>
+                                        <Text fontSize="sm" color="gray.700">
+                                          {req.text}
+                                        </Text>
+                                      </Box>
+
+                                      {req.response && (
+                                        <Box>
+                                          <Text fontSize="xs" color="gray.500" mb={1}>
+                                            {t('requests.tableResponse') || 'Ответ'}:
+                                          </Text>
+                                          <Text fontSize="sm" color="gray.700">
+                                            {req.response}
+                                          </Text>
+                                        </Box>
+                                      )}
+
+                                      {req.files && req.files.length > 0 && (
+                                        <Box>
+                                          <Text fontSize="xs" color="gray.500" mb={1}>
+                                            {t('requests.tableFiles') || 'Файлы'}:
+                                          </Text>
+                                          {renderFileList(req.files, req._id || req.id)}
+                                        </Box>
+                                      )}
+
+                                      <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                        <Text fontSize="xs" color="gray.400">
+                                          {formatDate(req.createdAt)}
+                                        </Text>
+                                        <Button
+                                          size="xs"
+                                          variant="outline"
+                                          colorPalette="red"
+                                          onClick={() => handleDeleteRequest(req._id || req.id || '')}
+                                          gap={1}
+                                        >
+                                          <FiTrash2 />
+                                          <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
+                                        </Button>
+                                      </HStack>
+                                    </VStack>
+                                  </Box>
+                                ))}
+                              </VStack>
+                            </Box>
+                          ))}
+                        </VStack>
+                      ) : (
+                        <Box p={8} textAlign="center" color="gray.500">
+                          <Text>{t('requests.sentEmpty') || 'Нет отправленных запросов'}</Text>
+                        </Box>
+                      )}
+                    </VStack>
+                  </VStack>
+                </Box>
+              </Tabs.Content>
+            </Box>
+
+            <Box css={{ "& [role='tabpanel'][data-selected]": { pt: 6 } }}>
+              {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+              <Tabs.Content value="received">
+                <Box>
+                  <VStack gap={6} align="stretch">
+                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.receivedTitle') || 'Полученные запросы'}</Text>
+
+                    {receivedRequests.length > 0 ? (
+                      <>
+                        {/* Desktop: Table */}
+                        <Box display={{ base: 'none', lg: 'block' }} overflowX="auto">
+                          <Table.Root variant="line">
+                            <Table.Header>
+                              <Table.Row>
+                                <Table.ColumnHeader>{t('requests.tableFromCompany') || 'От компании'}</Table.ColumnHeader>
+                                <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
+                                <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
+                                <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
+                                <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
+                                <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
+                              </Table.Row>
+                            </Table.Header>
+                            <Table.Body>
+                              {receivedRequests.map((req: RequestModel) => (
+                                <Table.Row key={req._id || req.id}>
+                                  <Table.Cell fontWeight="medium">{getCompanyName(req.senderCompanyId)}</Table.Cell>
+                                  <Table.Cell fontSize="sm" color="gray.600">
+                                    {req.text}
+                                  </Table.Cell>
+                                  <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
+                                  <Table.Cell>
+                                    <Badge
+                                      colorPalette={
+                                        req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
+                                      }
+                                    >
+                                      {req.status === 'pending'
+                                        ? t('requests.statusPending') || 'Ожидание'
+                                        : req.status === 'accepted'
+                                          ? t('requests.statusAccepted') || 'Принято'
+                                          : t('requests.statusRejected') || 'Отклонено'}
+                                    </Badge>
+                                  </Table.Cell>
+                                  <Table.Cell fontSize="xs" color="gray.400">
+                                    {formatDate(req.createdAt)}
+                                  </Table.Cell>
+                                  <Table.Cell>
+                                    <Button
+                                      size="xs"
+                                      variant={req.status === 'pending' ? 'solid' : 'outline'}
+                                      colorPalette="brand"
+                                      onClick={() => setRespondingTo(req._id || req.id || '')}
+                                      gap={2}
+                                    >
+                                      {req.status === 'pending' ? (
+                                        <>
+                                          <FiSend />
+                                          <Text>{t('requests.respond') || 'Ответить'}</Text>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FiEye />
+                                          <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
+                                        </>
+                                      )}
+                                    </Button>
+                                  </Table.Cell>
+                                </Table.Row>
+                              ))}
+                            </Table.Body>
+                          </Table.Root>
+                        </Box>
+
+                        {/* Mobile: Cards */}
+                        <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
+                          {receivedRequests.map((req: RequestModel) => (
+                            <Box
+                              key={req._id || req.id}
+                              p={3}
+                              borderWidth="1px"
+                              borderRadius="md"
+                              bg="white"
+                            >
+                              <VStack align="stretch" gap={2}>
+                                <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                  <Text fontWeight="bold" fontSize="sm">
+                                    {getCompanyName(req.senderCompanyId)}
+                                  </Text>
+                                  <Badge
+                                    colorPalette={
+                                      req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
+                                    }
+                                  >
+                                    {req.status === 'pending'
+                                      ? t('requests.statusPending') || 'Ожидание'
+                                      : req.status === 'accepted'
+                                        ? t('requests.statusAccepted') || 'Принято'
+                                        : t('requests.statusRejected') || 'Отклонено'}
+                                  </Badge>
+                                </HStack>
+
+                                <Box>
+                                  <Text fontSize="xs" color="gray.500" mb={1}>
+                                    {t('requests.tableText') || 'Текст'}:
+                                  </Text>
+                                  <Text fontSize="sm" color="gray.700">
+                                    {req.text}
+                                  </Text>
+                                </Box>
+
+                                {req.files && req.files.length > 0 && (
+                                  <Box>
+                                    <Text fontSize="xs" color="gray.500" mb={1}>
+                                      {t('requests.tableFiles') || 'Файлы'}:
+                                    </Text>
+                                    {renderFileList(req.files, req._id || req.id)}
+                                  </Box>
+                                )}
+
+                                <HStack justify="space-between" flexWrap="wrap" gap={2}>
+                                  <Text fontSize="xs" color="gray.400">
+                                    {formatDate(req.createdAt)}
+                                  </Text>
+                                  <Button
+                                    size="xs"
+                                    variant={req.status === 'pending' ? 'solid' : 'outline'}
+                                    colorPalette="brand"
+                                    onClick={() => setRespondingTo(req._id || req.id || '')}
+                                    gap={1}
+                                  >
+                                    {req.status === 'pending' ? (
+                                      <>
+                                        <FiSend />
+                                        <Text>{t('requests.respond') || 'Ответить'}</Text>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <FiEye />
+                                        <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
+                                      </>
+                                    )}
+                                  </Button>
+                                </HStack>
+                              </VStack>
+                            </Box>
+                          ))}
+                        </VStack>
+                      </>
+                    ) : (
+                      <Box p={8} textAlign="center" color="gray.500">
+                        <Text>{t('requests.receivedEmpty') || 'Нет полученных запросов'}</Text>
+                      </Box>
+                    )}
+                  </VStack>
+                </Box>
+              </Tabs.Content>
+            </Box>
+
+            <Box css={{ "& [role='tabpanel'][data-selected]": { pt: 6 } }}>
+              {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
+              <Tabs.Content value="responses">
+                <Box>
+                  <VStack gap={6} align="stretch">
+                    <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
+                      <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.responsesTitle') || 'Ответы на отправленные запросы'}</Text>
+                      <Button
+                        size={{ base: 'xs', md: 'sm' }}
+                        variant="outline"
+                        onClick={() => {
+                          const responses = sentRequests.filter((r: RequestModel) => r.response)
+                          const data = responses.map((r) => ({
+                            [t('requests.tableCompany') || 'Компания']: getCompanyName(r.recipientCompanyId),
+                            [t('requests.tableStatus') || 'Статус']:
+                            r.status === 'pending'
+                              ? t('requests.statusPending') || 'Ожидание'
+                              : r.status === 'accepted'
+                                ? t('requests.statusAccepted') || 'Принято'
+                                : t('requests.statusRejected') || 'Отклонено',
+                            [t('requests.tableResponse') || 'Ответ']: r.response || '-',
+                            [t('requests.tableResponseDate') || 'Дата ответа']: r.respondedAt
+                              ? formatDate(r.respondedAt)
+                              : '-',
+                          }))
+                          const worksheet = XLSX.utils.json_to_sheet(data)
+                          const workbook = XLSX.utils.book_new()
+                          XLSX.utils.book_append_sheet(workbook, worksheet, 'Ответы')
+                          XLSX.writeFile(workbook, 'responses.xlsx')
+                        }}
                         gap={2}
-                        size={{ base: 'sm', md: 'md' }}
-                        w={{ base: 'full', md: 'auto' }}
                       >
-                        <FiSend />
-                        <Text>{t('requests.sendButton') || 'Отправить запрос'}</Text>
+                        <FiDownload />
+                        <Text display={{ base: 'none', md: 'block' }}>{t('requests.exportXlsx') || 'Экспортировать в XLSX'}</Text>
+                        <Text display={{ base: 'block', md: 'none' }}>XLSX</Text>
                       </Button>
                     </HStack>
-                  </VStack>
 
-                  <VStack gap={4} align="stretch">
-                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.sentHistory') || 'История отправленных запросов'}</Text>
-                    {groupedSentRequests.length > 0 ? (
+                    {groupedResponses.length > 0 ? (
                       <VStack align="stretch" gap={4}>
-                        {groupedSentRequests.map(([groupSubject, requests]) => (
+                        {groupedResponses.map(([groupSubject, requests]) => (
                           <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={{ base: 3, md: 4 }} bg="white" overflow="hidden">
                             <Heading size={{ base: 'xs', md: 'sm' }} mb={3}>
                               {groupSubject}
                             </Heading>
-                            
+                          
                             {/* Desktop: Table */}
                             <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" mx={-4} mb={-4}>
                               <Table.Root variant="line">
                                 <Table.Header>
                                   <Table.Row>
                                     <Table.ColumnHeader>{t('requests.tableCompany') || 'Компания'}</Table.ColumnHeader>
-                                    <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
-                                    <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
                                     <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
                                     <Table.ColumnHeader>{t('requests.tableResponse') || 'Ответ'}</Table.ColumnHeader>
-                                    <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
-                                    <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableResponseFiles') || 'Файлы ответа'}</Table.ColumnHeader>
+                                    <Table.ColumnHeader>{t('requests.tableResponseDate') || 'Дата ответа'}</Table.ColumnHeader>
                                   </Table.Row>
                                 </Table.Header>
                                 <Table.Body>
                                   {requests.map((req) => (
                                     <Table.Row key={req._id || req.id}>
                                       <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
-                                      <Table.Cell fontSize="sm" color="gray.600">
-                                        {req.text}
-                                      </Table.Cell>
-                                      <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
                                       <Table.Cell>
                                         <Badge
                                           colorPalette={
@@ -657,22 +1034,11 @@ const RequestsPage = () => {
                                         </Badge>
                                       </Table.Cell>
                                       <Table.Cell fontSize="sm" color="gray.600">
-                                        {req.response || '-'}
+                                        {req.response}
                                       </Table.Cell>
+                                      <Table.Cell>{renderFileList(req.responseFiles, req._id || req.id, true)}</Table.Cell>
                                       <Table.Cell fontSize="xs" color="gray.400">
-                                        {formatDate(req.createdAt)}
-                                      </Table.Cell>
-                                      <Table.Cell>
-                                        <Button
-                                          size="xs"
-                                          variant="outline"
-                                          colorPalette="red"
-                                          onClick={() => handleDeleteRequest(req._id || req.id || '')}
-                                          gap={2}
-                                        >
-                                          <FiTrash2 />
-                                          <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
-                                        </Button>
+                                        {formatDate(req.respondedAt)}
                                       </Table.Cell>
                                     </Table.Row>
                                   ))}
@@ -714,48 +1080,25 @@ const RequestsPage = () => {
 
                                     <Box>
                                       <Text fontSize="xs" color="gray.500" mb={1}>
-                                        {t('requests.tableText') || 'Текст'}:
+                                        {t('requests.tableResponse') || 'Ответ'}:
                                       </Text>
                                       <Text fontSize="sm" color="gray.700">
-                                        {req.text}
+                                        {req.response}
                                       </Text>
                                     </Box>
 
-                                    {req.response && (
+                                    {req.responseFiles && req.responseFiles.length > 0 && (
                                       <Box>
                                         <Text fontSize="xs" color="gray.500" mb={1}>
-                                          {t('requests.tableResponse') || 'Ответ'}:
+                                          {t('requests.tableResponseFiles') || 'Файлы ответа'}:
                                         </Text>
-                                        <Text fontSize="sm" color="gray.700">
-                                          {req.response}
-                                        </Text>
+                                        {renderFileList(req.responseFiles, req._id || req.id, true)}
                                       </Box>
                                     )}
 
-                                    {req.files && req.files.length > 0 && (
-                                      <Box>
-                                        <Text fontSize="xs" color="gray.500" mb={1}>
-                                          {t('requests.tableFiles') || 'Файлы'}:
-                                        </Text>
-                                        {renderFileList(req.files, req._id || req.id)}
-                                      </Box>
-                                    )}
-
-                                    <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                                      <Text fontSize="xs" color="gray.400">
-                                        {formatDate(req.createdAt)}
-                                      </Text>
-                                      <Button
-                                        size="xs"
-                                        variant="outline"
-                                        colorPalette="red"
-                                        onClick={() => handleDeleteRequest(req._id || req.id || '')}
-                                        gap={1}
-                                      >
-                                        <FiTrash2 />
-                                        <Text>{t('common:buttons.delete') || 'Удалить'}</Text>
-                                      </Button>
-                                    </HStack>
+                                    <Text fontSize="xs" color="gray.400">
+                                      {formatDate(req.respondedAt)}
+                                    </Text>
                                   </VStack>
                                 </Box>
                               ))}
@@ -765,327 +1108,13 @@ const RequestsPage = () => {
                       </VStack>
                     ) : (
                       <Box p={8} textAlign="center" color="gray.500">
-                        <Text>{t('requests.sentEmpty') || 'Нет отправленных запросов'}</Text>
+                        <Text>{t('requests.responsesEmpty') || 'Нет ответов на запросы'}</Text>
                       </Box>
                     )}
                   </VStack>
-                </VStack>
-              </Box>
-            </Tabs.Content>
-
-            <Tabs.Content value="received">
-              <Box pt={6}>
-                <VStack gap={6} align="stretch">
-                  <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.receivedTitle') || 'Полученные запросы'}</Text>
-
-                  {receivedRequests.length > 0 ? (
-                    <>
-                      {/* Desktop: Table */}
-                      <Box display={{ base: 'none', lg: 'block' }} overflowX="auto">
-                        <Table.Root variant="line">
-                          <Table.Header>
-                            <Table.Row>
-                              <Table.ColumnHeader>{t('requests.tableFromCompany') || 'От компании'}</Table.ColumnHeader>
-                              <Table.ColumnHeader>{t('requests.tableText') || 'Текст'}</Table.ColumnHeader>
-                              <Table.ColumnHeader>{t('requests.tableFiles') || 'Файлы'}</Table.ColumnHeader>
-                              <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
-                              <Table.ColumnHeader>{t('requests.tableDate') || 'Дата'}</Table.ColumnHeader>
-                              <Table.ColumnHeader>{t('requests.tableActions') || 'Действия'}</Table.ColumnHeader>
-                            </Table.Row>
-                          </Table.Header>
-                          <Table.Body>
-                            {receivedRequests.map((req: RequestModel) => (
-                              <Table.Row key={req._id || req.id}>
-                                <Table.Cell fontWeight="medium">{getCompanyName(req.senderCompanyId)}</Table.Cell>
-                                <Table.Cell fontSize="sm" color="gray.600">
-                                  {req.text}
-                                </Table.Cell>
-                                <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
-                                <Table.Cell>
-                                  <Badge
-                                    colorPalette={
-                                      req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
-                                    }
-                                  >
-                                    {req.status === 'pending'
-                                      ? t('requests.statusPending') || 'Ожидание'
-                                      : req.status === 'accepted'
-                                        ? t('requests.statusAccepted') || 'Принято'
-                                        : t('requests.statusRejected') || 'Отклонено'}
-                                  </Badge>
-                                </Table.Cell>
-                                <Table.Cell fontSize="xs" color="gray.400">
-                                  {formatDate(req.createdAt)}
-                                </Table.Cell>
-                                <Table.Cell>
-                                  <Button
-                                    size="xs"
-                                    variant={req.status === 'pending' ? 'solid' : 'outline'}
-                                    colorPalette="brand"
-                                    onClick={() => setRespondingTo(req._id || req.id || '')}
-                                    gap={2}
-                                  >
-                                    {req.status === 'pending' ? (
-                                      <>
-                                        <FiSend />
-                                        <Text>{t('requests.respond') || 'Ответить'}</Text>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FiEye />
-                                        <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
-                                      </>
-                                    )}
-                                  </Button>
-                                </Table.Cell>
-                              </Table.Row>
-                            ))}
-                          </Table.Body>
-                        </Table.Root>
-                      </Box>
-
-                      {/* Mobile: Cards */}
-                      <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
-                        {receivedRequests.map((req: RequestModel) => (
-                          <Box
-                            key={req._id || req.id}
-                            p={3}
-                            borderWidth="1px"
-                            borderRadius="md"
-                            bg="white"
-                          >
-                            <VStack align="stretch" gap={2}>
-                              <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                                <Text fontWeight="bold" fontSize="sm">
-                                  {getCompanyName(req.senderCompanyId)}
-                                </Text>
-                                <Badge
-                                  colorPalette={
-                                    req.status === 'accepted' ? 'green' : req.status === 'rejected' ? 'red' : 'yellow'
-                                  }
-                                >
-                                  {req.status === 'pending'
-                                    ? t('requests.statusPending') || 'Ожидание'
-                                    : req.status === 'accepted'
-                                      ? t('requests.statusAccepted') || 'Принято'
-                                      : t('requests.statusRejected') || 'Отклонено'}
-                                </Badge>
-                              </HStack>
-
-                              <Box>
-                                <Text fontSize="xs" color="gray.500" mb={1}>
-                                  {t('requests.tableText') || 'Текст'}:
-                                </Text>
-                                <Text fontSize="sm" color="gray.700">
-                                  {req.text}
-                                </Text>
-                              </Box>
-
-                              {req.files && req.files.length > 0 && (
-                                <Box>
-                                  <Text fontSize="xs" color="gray.500" mb={1}>
-                                    {t('requests.tableFiles') || 'Файлы'}:
-                                  </Text>
-                                  {renderFileList(req.files, req._id || req.id)}
-                                </Box>
-                              )}
-
-                              <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                                <Text fontSize="xs" color="gray.400">
-                                  {formatDate(req.createdAt)}
-                                </Text>
-                                <Button
-                                  size="xs"
-                                  variant={req.status === 'pending' ? 'solid' : 'outline'}
-                                  colorPalette="brand"
-                                  onClick={() => setRespondingTo(req._id || req.id || '')}
-                                  gap={1}
-                                >
-                                  {req.status === 'pending' ? (
-                                    <>
-                                      <FiSend />
-                                      <Text>{t('requests.respond') || 'Ответить'}</Text>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FiEye />
-                                      <Text>{t('requests.viewResponse') || 'Посмотреть'}</Text>
-                                    </>
-                                  )}
-                                </Button>
-                              </HStack>
-                            </VStack>
-                          </Box>
-                        ))}
-                      </VStack>
-                    </>
-                  ) : (
-                    <Box p={8} textAlign="center" color="gray.500">
-                      <Text>{t('requests.receivedEmpty') || 'Нет полученных запросов'}</Text>
-                    </Box>
-                  )}
-                </VStack>
-              </Box>
-            </Tabs.Content>
-
-            <Tabs.Content value="responses">
-              <Box pt={6}>
-                <VStack gap={6} align="stretch">
-                  <HStack justify="space-between" align="center" flexWrap="wrap" gap={3}>
-                    <Text fontWeight="semibold" fontSize={{ base: 'md', md: 'lg' }}>{t('requests.responsesTitle') || 'Ответы на отправленные запросы'}</Text>
-                    <Button
-                      size={{ base: 'xs', md: 'sm' }}
-                      variant="outline"
-                      onClick={() => {
-                        const responses = sentRequests.filter((r: RequestModel) => r.response)
-                        const data = responses.map((r) => ({
-                          [t('requests.tableCompany') || 'Компания']: getCompanyName(r.recipientCompanyId),
-                          [t('requests.tableStatus') || 'Статус']:
-                            r.status === 'pending'
-                              ? t('requests.statusPending') || 'Ожидание'
-                              : r.status === 'accepted'
-                                ? t('requests.statusAccepted') || 'Принято'
-                                : t('requests.statusRejected') || 'Отклонено',
-                          [t('requests.tableResponse') || 'Ответ']: r.response || '-',
-                          [t('requests.tableResponseDate') || 'Дата ответа']: r.respondedAt
-                            ? formatDate(r.respondedAt)
-                            : '-',
-                        }))
-                        const worksheet = XLSX.utils.json_to_sheet(data)
-                        const workbook = XLSX.utils.book_new()
-                        XLSX.utils.book_append_sheet(workbook, worksheet, 'Ответы')
-                        XLSX.writeFile(workbook, 'responses.xlsx')
-                      }}
-                      gap={2}
-                    >
-                      <FiDownload />
-                      <Text display={{ base: 'none', md: 'block' }}>{t('requests.exportXlsx') || 'Экспортировать в XLSX'}</Text>
-                      <Text display={{ base: 'block', md: 'none' }}>XLSX</Text>
-                    </Button>
-                  </HStack>
-
-                  {groupedResponses.length > 0 ? (
-                    <VStack align="stretch" gap={4}>
-                      {groupedResponses.map(([groupSubject, requests]) => (
-                        <Box key={groupSubject} borderWidth="1px" borderRadius="lg" p={{ base: 3, md: 4 }} bg="white" overflow="hidden">
-                          <Heading size={{ base: 'xs', md: 'sm' }} mb={3}>
-                            {groupSubject}
-                          </Heading>
-                          
-                          {/* Desktop: Table */}
-                          <Box display={{ base: 'none', lg: 'block' }} overflowX="auto" mx={-4} mb={-4}>
-                            <Table.Root variant="line">
-                              <Table.Header>
-                                <Table.Row>
-                                  <Table.ColumnHeader>{t('requests.tableCompany') || 'Компания'}</Table.ColumnHeader>
-                                  <Table.ColumnHeader>{t('requests.tableStatus') || 'Статус'}</Table.ColumnHeader>
-                                  <Table.ColumnHeader>{t('requests.tableResponse') || 'Ответ'}</Table.ColumnHeader>
-                                  <Table.ColumnHeader>{t('requests.tableResponseFiles') || 'Файлы ответа'}</Table.ColumnHeader>
-                                  <Table.ColumnHeader>{t('requests.tableResponseDate') || 'Дата ответа'}</Table.ColumnHeader>
-                                </Table.Row>
-                              </Table.Header>
-                              <Table.Body>
-                                {requests.map((req) => (
-                                  <Table.Row key={req._id || req.id}>
-                                    <Table.Cell fontWeight="medium">{getCompanyName(req.recipientCompanyId)}</Table.Cell>
-                                    <Table.Cell>
-                                      <Badge
-                                        colorPalette={
-                                          req.status === 'accepted'
-                                            ? 'green'
-                                            : req.status === 'rejected'
-                                              ? 'red'
-                                              : 'yellow'
-                                        }
-                                      >
-                                        {req.status === 'pending'
-                                          ? t('requests.statusPending') || 'Ожидание'
-                                          : req.status === 'accepted'
-                                            ? t('requests.statusAccepted') || 'Принято'
-                                            : t('requests.statusRejected') || 'Отклонено'}
-                                      </Badge>
-                                    </Table.Cell>
-                                    <Table.Cell fontSize="sm" color="gray.600">
-                                      {req.response}
-                                    </Table.Cell>
-                                    <Table.Cell>{renderFileList(req.responseFiles, req._id || req.id, true)}</Table.Cell>
-                                    <Table.Cell fontSize="xs" color="gray.400">
-                                      {formatDate(req.respondedAt)}
-                                    </Table.Cell>
-                                  </Table.Row>
-                                ))}
-                              </Table.Body>
-                            </Table.Root>
-                          </Box>
-
-                          {/* Mobile: Cards */}
-                          <VStack display={{ base: 'flex', lg: 'none' }} gap={3} align="stretch">
-                            {requests.map((req) => (
-                              <Box
-                                key={req._id || req.id}
-                                p={3}
-                                borderWidth="1px"
-                                borderRadius="md"
-                                bg="gray.50"
-                              >
-                                <VStack align="stretch" gap={2}>
-                                  <HStack justify="space-between" flexWrap="wrap" gap={2}>
-                                    <Text fontWeight="bold" fontSize="sm">
-                                      {getCompanyName(req.recipientCompanyId)}
-                                    </Text>
-                                    <Badge
-                                      colorPalette={
-                                        req.status === 'accepted'
-                                          ? 'green'
-                                          : req.status === 'rejected'
-                                            ? 'red'
-                                            : 'yellow'
-                                      }
-                                    >
-                                      {req.status === 'pending'
-                                        ? t('requests.statusPending') || 'Ожидание'
-                                        : req.status === 'accepted'
-                                          ? t('requests.statusAccepted') || 'Принято'
-                                          : t('requests.statusRejected') || 'Отклонено'}
-                                    </Badge>
-                                  </HStack>
-
-                                  <Box>
-                                    <Text fontSize="xs" color="gray.500" mb={1}>
-                                      {t('requests.tableResponse') || 'Ответ'}:
-                                    </Text>
-                                    <Text fontSize="sm" color="gray.700">
-                                      {req.response}
-                                    </Text>
-                                  </Box>
-
-                                  {req.responseFiles && req.responseFiles.length > 0 && (
-                                    <Box>
-                                      <Text fontSize="xs" color="gray.500" mb={1}>
-                                        {t('requests.tableResponseFiles') || 'Файлы ответа'}:
-                                      </Text>
-                                      {renderFileList(req.responseFiles, req._id || req.id, true)}
-                                    </Box>
-                                  )}
-
-                                  <Text fontSize="xs" color="gray.400">
-                                    {formatDate(req.respondedAt)}
-                                  </Text>
-                                </VStack>
-                              </Box>
-                            ))}
-                          </VStack>
-                        </Box>
-                      ))}
-                    </VStack>
-                  ) : (
-                    <Box p={8} textAlign="center" color="gray.500">
-                      <Text>{t('requests.responsesEmpty') || 'Нет ответов на запросы'}</Text>
-                    </Box>
-                  )}
-                </VStack>
-              </Box>
-            </Tabs.Content>
+                </Box>
+              </Tabs.Content>
+            </Box>
           </Tabs.Root>
         </VStack>
       </Container>
@@ -1106,16 +1135,18 @@ const RequestsPage = () => {
         size="lg"
       >
         <Dialog.Backdrop />
+        {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
         <Dialog.Positioner>
+          {/* @ts-expect-error - Chakra UI v3 type definitions issue */}
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>{t('requests.respondDialogTitle') || 'Ответить на запрос'}</Dialog.Title>
+              <Box as={Dialog.Title}>{t('requests.respondDialogTitle') || 'Ответить на запрос'}</Box>
               <Dialog.CloseTrigger />
             </Dialog.Header>
             <Dialog.Body>
               <VStack gap={4}>
                 <Field.Root>
-                  <Field.Label>{t('requests.statusLabel') || 'Статус'}</Field.Label>
+                  <Box as={Field.Label}>{t('requests.statusLabel') || 'Статус'}</Box>
                   <NativeSelect.Root size="sm">
                     <NativeSelect.Field
                       value={responseStatus}
@@ -1129,7 +1160,7 @@ const RequestsPage = () => {
                 </Field.Root>
 
                 <Field.Root required>
-                  <Field.Label>{t('requests.responseText') || 'Текст ответа'}</Field.Label>
+                  <Box as={Field.Label}>{t('requests.responseText') || 'Текст ответа'}</Box>
                   <Textarea
                     value={responseText}
                     onChange={(event) => setResponseText(event.target.value)}
@@ -1139,7 +1170,7 @@ const RequestsPage = () => {
                 </Field.Root>
 
                 <Field.Root>
-                  <Field.Label>{t('requests.responseFiles') || 'Вложения к ответу'}</Field.Label>
+                  <Box as={Field.Label}>{t('requests.responseFiles') || 'Вложения к ответу'}</Box>
                   <Input
                     ref={responseFileInputRef}
                     type="file"
