@@ -38,6 +38,7 @@ import {
   useGetBuyProductAcceptancesQuery,
 } from '../../__data__/api/buyProductsApi'
 import { useToast } from '../../hooks/useToast'
+import { URLs } from '../../__data__/urls'
 import * as XLSX from 'xlsx'
 
 type RecipientOption = {
@@ -327,7 +328,7 @@ const RequestsPage = () => {
   const handleDownloadResponseFile = async (requestId: string, fileId: string, fileName: string) => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`/api/requests/download/${requestId}/${fileId}`, {
+      const response = await fetch(`${URLs.apiUrl}/requests/download/${requestId}/${fileId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
