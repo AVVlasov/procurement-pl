@@ -30,6 +30,7 @@ import {
   useGetBuyProductAcceptancesQuery,
 } from '../../../__data__/api/buyProductsApi'
 import { useToast } from '../../../hooks/useToast'
+import { URLs } from '../../../__data__/urls'
 
 interface BuyProductForm {
   name: string
@@ -213,7 +214,7 @@ export const BuyProductsTab = ({ companyId: propCompanyId, isOwnCompany }: { com
   const handleDownloadFile = async (productId: string, fileId: string, fileName: string) => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`/api/buy-products/download/${productId}/${fileId}`, {
+      const response = await fetch(`${URLs.apiUrl}/buy-products/download/${productId}/${fileId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
