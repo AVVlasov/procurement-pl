@@ -17,6 +17,8 @@ export interface SearchParams {
   offset?: number; // Точный offset для пагинации со смешанными размерами страниц
   sortBy?: 'relevance' | 'rating' | 'name';
   sortOrder?: 'asc' | 'desc';
+  minEmployees?: number; // Кастомный фильтр: минимальное количество сотрудников
+  maxEmployees?: number; // Кастомный фильтр: максимальное количество сотрудников
 }
 
 export interface SearchResult {
@@ -47,22 +49,32 @@ const buildQueryString = (params: Record<string, any>): string => {
   const searchParams = new URLSearchParams()
   
   for (const [key, value] of Object.entries(params)) {
-    if (value === undefined || value === null) {
+    // Skip undefined, null, and empty strings
+    if (value === undefined || value === null || value === '') {
       continue
     }
     
     if (Array.isArray(value)) {
       // For arrays, add multiple parameters with same name
+      // Skip empty arrays
+      if (value.length === 0) {
+        continue
+      }
       value.forEach(v => {
-        if (v !== undefined && v !== null) {
+        if (v !== undefined && v !== null && v !== '') {
           searchParams.append(key, String(v))
         }
       })
     } else if (typeof value === 'boolean') {
-      // For booleans, always include them
-      searchParams.set(key, value ? 'true' : 'false')
+      // For booleans, only include true values
+      if (value === true) {
+        searchParams.set(key, 'true')
+      }
+    } else if (typeof value === 'number') {
+      // For numbers, always include (even 0 is valid)
+      searchParams.set(key, String(value))
     } else {
-      // For other types, just convert to string
+      // For other types, convert to string (already checked for empty strings above)
       searchParams.set(key, String(value))
     }
   }

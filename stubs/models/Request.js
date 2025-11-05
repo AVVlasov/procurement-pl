@@ -22,12 +22,12 @@ const requestSchema = new mongoose.Schema({
     required: true
   },
   files: [{
-    id: String,
-    name: String,
-    url: String,
-    type: String,
-    size: Number,
-    storagePath: String,
+    id: { type: String },
+    name: { type: String },
+    url: { type: String },
+    type: { type: String },
+    size: { type: Number },
+    storagePath: { type: String },
     uploadedAt: {
       type: Date,
       default: Date.now
@@ -47,12 +47,12 @@ const requestSchema = new mongoose.Schema({
     default: null
   },
   responseFiles: [{
-    id: String,
-    name: String,
-    url: String,
-    type: String,
-    size: Number,
-    storagePath: String,
+    id: { type: String },
+    name: { type: String },
+    url: { type: String },
+    type: { type: String },
+    size: { type: Number },
+    storagePath: { type: String },
     uploadedAt: {
       type: Date,
       default: Date.now

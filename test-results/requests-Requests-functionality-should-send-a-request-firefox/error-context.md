@@ -1,0 +1,270 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "top-end Notifications alt+T"
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - paragraph [ref=e6]: B2B Platform
+      - generic [ref=e7]:
+        - group [ref=e8] [cursor=pointer]:
+          - img [ref=e9]
+          - paragraph [ref=e12]: Dashboard
+        - group [ref=e13] [cursor=pointer]:
+          - img [ref=e14]
+          - paragraph [ref=e17]: Find Partners
+        - group [ref=e18] [cursor=pointer]:
+          - img [ref=e19]
+          - paragraph [ref=e22]: Company Profile
+        - group [ref=e23] [cursor=pointer]:
+          - img [ref=e24]
+          - paragraph [ref=e27]: Messages
+        - group [ref=e28] [cursor=pointer]:
+          - img [ref=e29]
+          - paragraph [ref=e35]: Requests
+        - group [ref=e36] [cursor=pointer]:
+          - img [ref=e37]
+          - paragraph [ref=e40]: Settings
+    - generic [ref=e41]:
+      - generic [ref=e43]:
+        - button "Change language" [ref=e44] [cursor=pointer]:
+          - img [ref=e45]
+        - generic [ref=e49]:
+          - generic [ref=e51]: И
+          - generic [ref=e52]:
+            - paragraph [ref=e53]: Иван Иванов
+            - paragraph
+        - button "Logout" [ref=e54] [cursor=pointer]:
+          - img [ref=e55]
+          - paragraph [ref=e59]: Logout
+      - generic [ref=e62]:
+        - heading "Bulk Requests" [level=2] [ref=e63]
+        - generic [ref=e64]:
+          - tablist [ref=e65]:
+            - tab "Sent Requests" [selected] [ref=e66] [cursor=pointer]
+            - tab "Received Requests" [ref=e67] [cursor=pointer]
+            - tab "Responses" [ref=e68] [cursor=pointer]
+          - tabpanel "Sent Requests" [ref=e69]:
+            - generic [ref=e71]:
+              - generic [ref=e72]:
+                - paragraph [ref=e73]: Send New Request
+                - group [ref=e74]:
+                  - generic [ref=e75]: Select Product
+                  - generic [ref=e76]:
+                    - combobox "Select Product" [ref=e77]:
+                      - option "Choose a product"
+                      - option "орг техника" [selected]
+                    - generic:
+                      - img
+                - group [ref=e78]:
+                  - generic [ref=e79]: Purchase Subject
+                  - textbox "Purchase Subject" [ref=e80]:
+                    - /placeholder: Enter purchase subject
+                    - text: орг техника
+                - group [ref=e81]:
+                  - generic [ref=e82]: Request Text
+                  - textbox "Request Text" [active] [ref=e83]:
+                    - /placeholder: Enter request text
+                    - text: Тестовый запрос для проверки
+                - group [ref=e84]:
+                  - generic [ref=e85]: Add files
+                  - button "Выбрать файлы" [ref=e86] [cursor=pointer]:
+                    - img [ref=e87]
+                    - paragraph [ref=e93]: Выбрать файлы
+                - generic [ref=e94]:
+                  - generic [ref=e95]:
+                    - paragraph [ref=e96]: Recipients
+                    - generic [ref=e97]: "Selected: 0"
+                  - textbox "Search companies" [ref=e98]
+                  - generic [ref=e99]:
+                    - generic [ref=e101]:
+                      - checkbox "ИТ Решения" [ref=e102]
+                      - img [ref=e104]
+                      - generic [ref=e105]:
+                        - generic [ref=e106] [cursor=pointer]: ИТ Решения
+                        - generic [ref=e107]: Catalog
+                    - generic [ref=e109]:
+                      - checkbox "ЛогистикПро" [ref=e110]
+                      - img [ref=e112]
+                      - generic [ref=e113]:
+                        - generic [ref=e114] [cursor=pointer]: ЛогистикПро
+                        - generic [ref=e115]: Catalog
+                    - generic [ref=e117]:
+                      - checkbox "МедСервис" [ref=e118]
+                      - img [ref=e120]
+                      - generic [ref=e121]:
+                        - generic [ref=e122] [cursor=pointer]: МедСервис
+                        - generic [ref=e123]: Catalog
+                    - generic [ref=e125]:
+                      - checkbox "ООО \"Тестовая Компания\"" [ref=e126]
+                      - img [ref=e128]
+                      - generic [ref=e129]:
+                        - generic [ref=e130] [cursor=pointer]: ООО "Тестовая Компания"
+                        - generic [ref=e131]: Catalog
+                    - generic [ref=e133]:
+                      - checkbox "Партнер" [ref=e134]
+                      - img [ref=e136]
+                      - generic [ref=e137]:
+                        - generic [ref=e138] [cursor=pointer]: Партнер
+                        - generic [ref=e139]: Catalog
+                    - generic [ref=e141]:
+                      - checkbox "ПродуктТрейд" [ref=e142]
+                      - img [ref=e144]
+                      - generic [ref=e145]:
+                        - generic [ref=e146] [cursor=pointer]: ПродуктТрейд
+                        - generic [ref=e147]: Catalog
+                    - generic [ref=e149]:
+                      - checkbox "Тестовая компания ОО" [ref=e150]
+                      - img [ref=e152]
+                      - generic [ref=e153]:
+                        - generic [ref=e154] [cursor=pointer]: Тестовая компания ОО
+                        - generic [ref=e155]: Catalog
+                    - generic [ref=e157]:
+                      - checkbox "ТехноСтрой" [ref=e158]
+                      - img [ref=e160]
+                      - generic [ref=e161]:
+                        - generic [ref=e162] [cursor=pointer]: ТехноСтрой
+                        - generic [ref=e163]: Catalog
+                    - generic [ref=e165]:
+                      - checkbox "ФинансГрупп" [ref=e166]
+                      - img [ref=e168]
+                      - generic [ref=e169]:
+                        - generic [ref=e170] [cursor=pointer]: ФинансГрупп
+                        - generic [ref=e171]: Catalog
+                - button "Send Request" [disabled] [ref=e173]:
+                  - img [ref=e174]
+                  - paragraph [ref=e177]: Send Request
+              - generic [ref=e178]:
+                - paragraph [ref=e179]: Sent Requests History
+                - generic [ref=e180]:
+                  - generic [ref=e181]:
+                    - heading "Запрос на поставку 1" [level=2] [ref=e182]
+                    - table [ref=e184]:
+                      - rowgroup [ref=e185]:
+                        - row "Company Text Files Status Response Date Actions" [ref=e186]:
+                          - cell "Company" [ref=e187]
+                          - cell "Text" [ref=e188]
+                          - cell "Files" [ref=e189]
+                          - cell "Status" [ref=e190]
+                          - cell "Response" [ref=e191]
+                          - cell "Date" [ref=e192]
+                          - cell "Actions" [ref=e193]
+                      - rowgroup [ref=e194]:
+                        - row "ТехноСтрой Здравствуйте! Интересует поставка товаров/услуг. Запрос 1. Прошу предоставить коммерческое предложение. No files attached Accepted Благодарим за запрос! Готовы предоставить услуги. Отправили КП на почту. 05.11.2025 Delete" [ref=e195]:
+                          - cell "ТехноСтрой" [ref=e196]
+                          - cell "Здравствуйте! Интересует поставка товаров/услуг. Запрос 1. Прошу предоставить коммерческое предложение." [ref=e197]
+                          - cell "No files attached" [ref=e198]:
+                            - paragraph [ref=e199]: No files attached
+                          - cell "Accepted" [ref=e200]:
+                            - generic [ref=e201]: Accepted
+                          - cell "Благодарим за запрос! Готовы предоставить услуги. Отправили КП на почту." [ref=e202]
+                          - cell "05.11.2025" [ref=e203]
+                          - cell "Delete" [ref=e204]:
+                            - button "Delete" [ref=e205] [cursor=pointer]:
+                              - img [ref=e206]
+                              - paragraph [ref=e211]: Delete
+                  - generic [ref=e212]:
+                    - heading "Запрос на поставку 2" [level=2] [ref=e213]
+                    - table [ref=e215]:
+                      - rowgroup [ref=e216]:
+                        - row "Company Text Files Status Response Date Actions" [ref=e217]:
+                          - cell "Company" [ref=e218]
+                          - cell "Text" [ref=e219]
+                          - cell "Files" [ref=e220]
+                          - cell "Status" [ref=e221]
+                          - cell "Response" [ref=e222]
+                          - cell "Date" [ref=e223]
+                          - cell "Actions" [ref=e224]
+                      - rowgroup [ref=e225]:
+                        - row "ФинансГрупп Здравствуйте! Интересует поставка товаров/услуг. Запрос 2. Прошу предоставить коммерческое предложение. No files attached Rejected К сожалению, в данный момент не можем предоставить эти услуги. 04.11.2025 Delete" [ref=e226]:
+                          - cell "ФинансГрупп" [ref=e227]
+                          - cell "Здравствуйте! Интересует поставка товаров/услуг. Запрос 2. Прошу предоставить коммерческое предложение." [ref=e228]
+                          - cell "No files attached" [ref=e229]:
+                            - paragraph [ref=e230]: No files attached
+                          - cell "Rejected" [ref=e231]:
+                            - generic [ref=e232]: Rejected
+                          - cell "К сожалению, в данный момент не можем предоставить эти услуги." [ref=e233]
+                          - cell "04.11.2025" [ref=e234]
+                          - cell "Delete" [ref=e235]:
+                            - button "Delete" [ref=e236] [cursor=pointer]:
+                              - img [ref=e237]
+                              - paragraph [ref=e242]: Delete
+                  - generic [ref=e243]:
+                    - heading "Запрос на поставку 3" [level=2] [ref=e244]
+                    - table [ref=e246]:
+                      - rowgroup [ref=e247]:
+                        - row "Company Text Files Status Response Date Actions" [ref=e248]:
+                          - cell "Company" [ref=e249]
+                          - cell "Text" [ref=e250]
+                          - cell "Files" [ref=e251]
+                          - cell "Status" [ref=e252]
+                          - cell "Response" [ref=e253]
+                          - cell "Date" [ref=e254]
+                          - cell "Actions" [ref=e255]
+                      - rowgroup [ref=e256]:
+                        - row "ИТ Решения Здравствуйте! Интересует поставка товаров/услуг. Запрос 3. Прошу предоставить коммерческое предложение. No files attached Pending - 03.11.2025 Delete" [ref=e257]:
+                          - cell "ИТ Решения" [ref=e258]
+                          - cell "Здравствуйте! Интересует поставка товаров/услуг. Запрос 3. Прошу предоставить коммерческое предложение." [ref=e259]
+                          - cell "No files attached" [ref=e260]:
+                            - paragraph [ref=e261]: No files attached
+                          - cell "Pending" [ref=e262]:
+                            - generic [ref=e263]: Pending
+                          - cell "-" [ref=e264]
+                          - cell "03.11.2025" [ref=e265]
+                          - cell "Delete" [ref=e266]:
+                            - button "Delete" [ref=e267] [cursor=pointer]:
+                              - img [ref=e268]
+                              - paragraph [ref=e273]: Delete
+                  - generic [ref=e274]:
+                    - heading "Запрос на поставку 4" [level=2] [ref=e275]
+                    - table [ref=e277]:
+                      - rowgroup [ref=e278]:
+                        - row "Company Text Files Status Response Date Actions" [ref=e279]:
+                          - cell "Company" [ref=e280]
+                          - cell "Text" [ref=e281]
+                          - cell "Files" [ref=e282]
+                          - cell "Status" [ref=e283]
+                          - cell "Response" [ref=e284]
+                          - cell "Date" [ref=e285]
+                          - cell "Actions" [ref=e286]
+                      - rowgroup [ref=e287]:
+                        - row "ЛогистикПро Здравствуйте! Интересует поставка товаров/услуг. Запрос 4. Прошу предоставить коммерческое предложение. No files attached Accepted Благодарим за запрос! Готовы предоставить услуги. Отправили КП на почту. 02.11.2025 Delete" [ref=e288]:
+                          - cell "ЛогистикПро" [ref=e289]
+                          - cell "Здравствуйте! Интересует поставка товаров/услуг. Запрос 4. Прошу предоставить коммерческое предложение." [ref=e290]
+                          - cell "No files attached" [ref=e291]:
+                            - paragraph [ref=e292]: No files attached
+                          - cell "Accepted" [ref=e293]:
+                            - generic [ref=e294]: Accepted
+                          - cell "Благодарим за запрос! Готовы предоставить услуги. Отправили КП на почту." [ref=e295]
+                          - cell "02.11.2025" [ref=e296]
+                          - cell "Delete" [ref=e297]:
+                            - button "Delete" [ref=e298] [cursor=pointer]:
+                              - img [ref=e299]
+                              - paragraph [ref=e304]: Delete
+                  - generic [ref=e305]:
+                    - heading "Запрос на поставку 5" [level=2] [ref=e306]
+                    - table [ref=e308]:
+                      - rowgroup [ref=e309]:
+                        - row "Company Text Files Status Response Date Actions" [ref=e310]:
+                          - cell "Company" [ref=e311]
+                          - cell "Text" [ref=e312]
+                          - cell "Files" [ref=e313]
+                          - cell "Status" [ref=e314]
+                          - cell "Response" [ref=e315]
+                          - cell "Date" [ref=e316]
+                          - cell "Actions" [ref=e317]
+                      - rowgroup [ref=e318]:
+                        - row "ПродуктТрейд Здравствуйте! Интересует поставка товаров/услуг. Запрос 5. Прошу предоставить коммерческое предложение. No files attached Rejected К сожалению, в данный момент не можем предоставить эти услуги. 01.11.2025 Delete" [ref=e319]:
+                          - cell "ПродуктТрейд" [ref=e320]
+                          - cell "Здравствуйте! Интересует поставка товаров/услуг. Запрос 5. Прошу предоставить коммерческое предложение." [ref=e321]
+                          - cell "No files attached" [ref=e322]:
+                            - paragraph [ref=e323]: No files attached
+                          - cell "Rejected" [ref=e324]:
+                            - generic [ref=e325]: Rejected
+                          - cell "К сожалению, в данный момент не можем предоставить эти услуги." [ref=e326]
+                          - cell "01.11.2025" [ref=e327]
+                          - cell "Delete" [ref=e328]:
+                            - button "Delete" [ref=e329] [cursor=pointer]:
+                              - img [ref=e330]
+                              - paragraph [ref=e335]: Delete
+```

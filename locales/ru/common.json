@@ -149,6 +149,8 @@
     "newRequest": "Отправить новый запрос",
     "product": "Выберите товар",
     "productPlaceholder": "Выберите товар из списка",
+    "productRequired": "Выберите товар",
+    "productFiles": "Файлы товара",
     "subject": "Предмет закупки",
     "subjectPlaceholder": "Введите предмет закупки",
     "subjectRequired": "Укажите предмет закупки",

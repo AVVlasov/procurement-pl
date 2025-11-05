@@ -65,11 +65,8 @@ const RequestsPage = () => {
   const { data: products = [] } = useGetCompanyBuyProductsQuery(companyId, { skip: !companyId })
 
   const [requestText, setRequestText] = useState('')
-  const [subject, setSubject] = useState('')
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([])
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
   const [selectedProductId, setSelectedProductId] = useState<string>('')
-  const requestFileInputRef = React.useRef<HTMLInputElement>(null)
   const [recipientSearch, setRecipientSearch] = useState('')
 
   const { data: productAcceptances = [], isLoading: isLoadingAcceptances } = useGetBuyProductAcceptancesQuery(
@@ -95,18 +92,6 @@ const RequestsPage = () => {
       ]),
     )
   }, [companyOptions])
-
-  useEffect(() => {
-    if (!selectedProductId) {
-      setSubject('')
-      return
-    }
-
-    const product = products.find((item: any) => item._id === selectedProductId)
-    if (product) {
-      setSubject(product.name)
-    }
-  }, [products, selectedProductId])
 
   const acceptanceOptions = useMemo<RecipientOption[]>(() => {
     if (!Array.isArray(productAcceptances) || productAcceptances.length === 0) {
@@ -155,6 +140,10 @@ const RequestsPage = () => {
     }))
   }, [companyOptions])
 
+  const selectedProduct = useMemo(() => {
+    return products.find((p) => p._id === selectedProductId) || null
+  }, [products, selectedProductId])
+
   const combinedRecipients = useMemo(() => {
     const recipientsMap = new Map<string, RecipientOption>()
     acceptanceOptions.forEach((option) => recipientsMap.set(option.id, option))
@@ -191,21 +180,6 @@ const RequestsPage = () => {
       .slice(0, 120)
   }, [acceptanceOptions, allCompanyOptions, recipientSearch])
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
-    if (!files || files.length === 0) {
-      return
-    }
-    setSelectedFiles(Array.from(files))
-  }
-
-  const handleRemoveSelectedFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, idx) => idx !== index))
-    if (requestFileInputRef.current && selectedFiles.length === 1) {
-      requestFileInputRef.current.value = ''
-    }
-  }
-
   const toggleRecipient = (companyId: string, checked: boolean) => {
     setSelectedRecipients((prev) => {
       if (!checked) {
@@ -226,8 +200,8 @@ const RequestsPage = () => {
   }
 
   const handleSendRequest = async () => {
-    if (!subject.trim()) {
-      showToast.warning(t('requests.subjectRequired') || 'Укажите предмет закупки')
+    if (!selectedProductId) {
+      showToast.warning(t('requests.productRequired') || 'Выберите товар')
       return
     }
 
@@ -249,22 +223,17 @@ const RequestsPage = () => {
     try {
       await sendRequest({
         text: requestText.trim(),
-        subject: subject.trim(),
+        subject: selectedProduct?.name || '',
         recipientCompanyIds: selectedRecipients,
-        productId: selectedProductId || undefined,
-        files: selectedFiles,
+        productId: selectedProductId,
+        files: [],
       }).unwrap()
 
       showToast.success(t('requests.sentSuccess') || 'Запрос отправлен успешно')
       setRequestText('')
-      setSubject('')
       setSelectedRecipients([])
-      setSelectedFiles([])
       setSelectedProductId('')
       setRecipientSearch('')
-      if (requestFileInputRef.current) {
-        requestFileInputRef.current.value = ''
-      }
     } catch (error) {
       console.error('[RequestsPage] sendRequest error:', error)
       showToast.error(t('requests.sendError') || 'Ошибка при отправке запроса')
@@ -355,7 +324,34 @@ const RequestsPage = () => {
     return companyDictionary.get(companyId)?.name || companyId
   }
 
-  const renderFileList = (files?: RequestFile[]) => {
+  const handleDownloadResponseFile = async (requestId: string, fileId: string, fileName: string) => {
+    try {
+      const token = localStorage.getItem('accessToken')
+      const response = await fetch(`/api/requests/download/${requestId}/${fileId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to download file')
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      showToast.error(t('requests.fileDownloadError') || 'Ошибка при скачивании файла')
+    }
+  }
+
+  const renderFileList = (files?: RequestFile[], requestId?: string, isResponseFiles?: boolean) => {
     if (!files || files.length === 0) {
       return (
         <Text fontSize="xs" color="gray.500">
@@ -366,22 +362,42 @@ const RequestsPage = () => {
 
     return (
       <VStack align="start" gap={1} maxW="280px">
-        {files.map((file) => (
-          <Button
-            key={file.id}
-            as="a"
-            href={file.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            size="sm"
-            variant="link"
-            colorPalette="brand"
-            gap={2}
-          >
-            <FiDownload />
-            <Text>{file.name}</Text>
-          </Button>
-        ))}
+        {files.map((file) => {
+          // Для всех файлов (и запросов, и ответов) используем защищенное скачивание с токеном авторизации
+          if (requestId) {
+            return (
+              <Button
+                key={file.id}
+                onClick={() => handleDownloadResponseFile(requestId, file.id, file.name)}
+                size="sm"
+                variant="link"
+                colorPalette="brand"
+                gap={2}
+              >
+                <FiDownload />
+                <Text>{file.name}</Text>
+              </Button>
+            )
+          }
+          
+          // Если нет requestId, используем обычную ссылку (не должно происходить)
+          return (
+            <Button
+              key={file.id}
+              as="a"
+              href={file.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              size="sm"
+              variant="link"
+              colorPalette="brand"
+              gap={2}
+            >
+              <FiDownload />
+              <Text>{file.name}</Text>
+            </Button>
+          )
+        })}
       </VStack>
     )
   }
@@ -483,15 +499,6 @@ const RequestsPage = () => {
                     </Field.Root>
 
                     <Field.Root required>
-                      <Field.Label>{t('requests.subject') || 'Предмет закупки'}</Field.Label>
-                      <Input
-                        value={subject}
-                        onChange={(event) => setSubject(event.target.value)}
-                        placeholder={t('requests.subjectPlaceholder') || 'Введите предмет закупки'}
-                      />
-                    </Field.Root>
-
-                    <Field.Root required>
                       <Field.Label>{t('requests.text') || 'Текст запроса'}</Field.Label>
                       <Textarea
                         value={requestText}
@@ -501,46 +508,20 @@ const RequestsPage = () => {
                       />
                     </Field.Root>
 
-                    <Field.Root>
-                      <Field.Label>{t('requests.attachments') || 'Добавить файлы'}</Field.Label>
-                      <Input
-                        ref={requestFileInputRef}
-                        type="file"
-                        onChange={handleFileSelect}
-                        multiple
-                        accept=".pdf,.doc,.docx,.xls,.xlsx,.csv"
-                        display="none"
-                      />
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => requestFileInputRef.current?.click()}
-                        gap={2}
-                      >
-                        <FiFileText />
-                        <Text>{t('requests.selectFiles') || 'Выбрать файлы'}</Text>
-                      </Button>
-                      {selectedFiles.length > 0 && (
+                    {selectedProduct && selectedProduct.files.length > 0 && (
+                      <Field.Root>
+                        <Field.Label>{t('requests.productFiles') || 'Файлы товара'}</Field.Label>
                         <VStack gap={2} mt={2} align="start">
-                          {selectedFiles.map((file, index) => (
-                            <HStack key={`${file.name}-${index}`} gap={2} fontSize="sm" color="gray.600">
+                          {selectedProduct.files.map((file) => (
+                            <HStack key={file.id} gap={2} fontSize="sm" color="gray.600">
                               <FiFileText />
                               <Text>{file.name}</Text>
                               <Text color="gray.400">({(file.size / 1024).toFixed(1)} KB)</Text>
-                              <IconButton
-                                size="xs"
-                                variant="ghost"
-                                colorPalette="red"
-                                aria-label={t('requests.removeFile') || 'Удалить файл'}
-                                onClick={() => handleRemoveSelectedFile(index)}
-                              >
-                                <FiTrash2 />
-                              </IconButton>
                             </HStack>
                           ))}
                         </VStack>
-                      )}
-                    </Field.Root>
+                      </Field.Root>
+                    )}
 
                     <VStack align="stretch" gap={3} borderWidth="1px" borderRadius="md" p={3} bg="gray.50">
                       <HStack justify="space-between" align="center">
@@ -610,7 +591,7 @@ const RequestsPage = () => {
                         disabled={
                           isSending
                           || !requestText.trim()
-                          || !subject.trim()
+                          || !selectedProductId
                           || selectedRecipients.length === 0
                           || selectedRecipients.length > MAX_RECIPIENTS
                         }
@@ -656,7 +637,7 @@ const RequestsPage = () => {
                                       <Table.Cell fontSize="sm" color="gray.600">
                                         {req.text}
                                       </Table.Cell>
-                                      <Table.Cell>{renderFileList(req.files)}</Table.Cell>
+                                      <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
                                       <Table.Cell>
                                         <Badge
                                           colorPalette={
@@ -755,7 +736,7 @@ const RequestsPage = () => {
                                         <Text fontSize="xs" color="gray.500" mb={1}>
                                           {t('requests.tableFiles') || 'Файлы'}:
                                         </Text>
-                                        {renderFileList(req.files)}
+                                        {renderFileList(req.files, req._id || req.id)}
                                       </Box>
                                     )}
 
@@ -818,7 +799,7 @@ const RequestsPage = () => {
                                 <Table.Cell fontSize="sm" color="gray.600">
                                   {req.text}
                                 </Table.Cell>
-                                <Table.Cell>{renderFileList(req.files)}</Table.Cell>
+                                <Table.Cell>{renderFileList(req.files, req._id || req.id)}</Table.Cell>
                                 <Table.Cell>
                                   <Badge
                                     colorPalette={
@@ -904,7 +885,7 @@ const RequestsPage = () => {
                                   <Text fontSize="xs" color="gray.500" mb={1}>
                                     {t('requests.tableFiles') || 'Файлы'}:
                                   </Text>
-                                  {renderFileList(req.files)}
+                                  {renderFileList(req.files, req._id || req.id)}
                                 </Box>
                               )}
 
@@ -1026,7 +1007,7 @@ const RequestsPage = () => {
                                     <Table.Cell fontSize="sm" color="gray.600">
                                       {req.response}
                                     </Table.Cell>
-                                    <Table.Cell>{renderFileList(req.responseFiles)}</Table.Cell>
+                                    <Table.Cell>{renderFileList(req.responseFiles, req._id || req.id, true)}</Table.Cell>
                                     <Table.Cell fontSize="xs" color="gray.400">
                                       {formatDate(req.respondedAt)}
                                     </Table.Cell>
@@ -1082,7 +1063,7 @@ const RequestsPage = () => {
                                       <Text fontSize="xs" color="gray.500" mb={1}>
                                         {t('requests.tableResponseFiles') || 'Файлы ответа'}:
                                       </Text>
-                                      {renderFileList(req.responseFiles)}
+                                      {renderFileList(req.responseFiles, req._id || req.id, true)}
                                     </Box>
                                   )}
 
@@ -1201,7 +1182,7 @@ const RequestsPage = () => {
                       <Text fontSize="xs" color="gray.500" mb={1}>
                         {t('requests.responseExistingFiles') || 'Полученные ранее файлы:'}
                       </Text>
-                      {renderFileList(respondingRequest.responseFiles)}
+                      {renderFileList(respondingRequest.responseFiles, respondingRequest._id || respondingRequest.id, true)}
                     </Box>
                   ) : null}
                 </Field.Root>

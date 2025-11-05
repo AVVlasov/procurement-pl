@@ -6,11 +6,17 @@ import {
   GridItem,
   VStack,
   Heading,
+  Button,
+  Badge,
+  HStack,
+  useDisclosure,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
+import { FiFilter } from 'react-icons/fi'
 import { MainLayout } from '../../components/layout/MainLayout'
 import { SmartSearchBar } from '../../components/search/SmartSearchBar'
 import { FiltersPanel } from '../../components/search/FiltersPanel'
+import { MobileFiltersDrawer } from '../../components/search/MobileFiltersDrawer'
 import { ResultsGrid } from '../../components/search/ResultsGrid'
 import { useToast } from '../../hooks/useToast'
 import {
@@ -24,6 +30,7 @@ import type { Company } from '../../__data__/api/companiesApi'
 export const SearchPage = () => {
   const { t } = useTranslation('search')
   const toast = useToast()
+  const mobileFiltersDisclosure = useDisclosure()
   
   const [searchQuery, setSearchQuery] = useState('')
   const [filters, setFilters] = useState<SearchParams>({
@@ -47,6 +54,18 @@ export const SearchPage = () => {
       filters.hasReviews ||
       filters.hasAcceptedDocs
     )
+  }, [filters])
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (filters.industries && filters.industries.length > 0) count += filters.industries.length
+    if (filters.companySize && filters.companySize.length > 0) count += filters.companySize.length
+    if (filters.geography && filters.geography.length > 0) count += filters.geography.length
+    if (filters.minRating && filters.minRating > 0) count += 1
+    if (filters.hasReviews) count += 1
+    if (filters.hasAcceptedDocs) count += 1
+    if (filters.minEmployees || filters.maxEmployees) count += 1
+    return count
   }, [filters])
 
   const hasSearchQuery = Boolean(searchQuery.trim())
@@ -189,13 +208,40 @@ export const SearchPage = () => {
             />
           </Box>
 
+          {/* Mobile Filters Button */}
+          <Box display={{ base: 'block', md: 'none' }} mb={4}>
+            <Button
+              w="full"
+              variant="outline"
+              onClick={mobileFiltersDisclosure.onOpen}
+              size="lg"
+              position="relative"
+            >
+              <HStack gap={2}>
+                <FiFilter />
+                <span>{t('filters.mobile_button')}</span>
+                {activeFiltersCount > 0 && (
+                  <Badge
+                    colorPalette="brand"
+                    borderRadius="full"
+                    px={2}
+                    py={0.5}
+                    fontSize="xs"
+                  >
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </HStack>
+            </Button>
+          </Box>
+
           {/* Main Content */}
           <Grid
             templateColumns={{ base: '1fr', md: '220px 1fr', lg: '280px 1fr', xl: '300px 1fr' }}
             gap={{ base: 6, md: 5, lg: 6, xl: 8 }}
             alignItems="start"
           >
-            {/* Filters Sidebar */}
+            {/* Filters Sidebar - Desktop */}
             <GridItem display={{ base: 'none', md: 'block' }}>
               <Box position="sticky" top={{ base: 2, md: 4 }}>
                 <FiltersPanel
@@ -222,6 +268,15 @@ export const SearchPage = () => {
               />
             </GridItem>
           </Grid>
+
+          {/* Mobile Filters Drawer */}
+          <MobileFiltersDrawer
+            open={mobileFiltersDisclosure.open}
+            onClose={mobileFiltersDisclosure.onClose}
+            filters={filters}
+            onChange={handleFiltersChange}
+            onReset={handleResetFilters}
+          />
         </VStack>
       </Container>
     </MainLayout>

@@ -39,20 +39,27 @@ const recreateTestUser = async () => {
 
     const presetCompanyId = new mongoose.Types.ObjectId('68fe2ccda3526c303ca06796');
     const presetUserEmail = 'admin@test-company.ru';
+    
+    const presetCompanyId2 = new mongoose.Types.ObjectId('68fe2ccda3526c303ca06797');
+    const presetUserEmail2 = 'manager@partner-company.ru';
 
-    // Удалить старого тестового пользователя
-    console.log('🗑️  Удаление старого тестового пользователя...');
-    const oldUser = await User.findOne({ email: presetUserEmail });
-    if (oldUser) {
-      // Удалить связанную компанию
-      if (oldUser.companyId) {
-        await Company.findByIdAndDelete(oldUser.companyId);
-        console.log('   ✓ Старая компания удалена');
+    // Удалить старых тестовых пользователей
+    console.log('🗑️  Удаление старых тестовых пользователей...');
+    const testEmails = [presetUserEmail, presetUserEmail2];
+    
+    for (const email of testEmails) {
+      const oldUser = await User.findOne({ email });
+      if (oldUser) {
+        // Удалить связанную компанию
+        if (oldUser.companyId) {
+          await Company.findByIdAndDelete(oldUser.companyId);
+          console.log(`   ✓ Старая компания для ${email} удалена`);
+        }
+        await User.findByIdAndDelete(oldUser._id);
+        console.log(`   ✓ Старый пользователь ${email} удален`);
+      } else {
+        console.log(`   ℹ️  Пользователь ${email} не найден`);
       }
-      await User.findByIdAndDelete(oldUser._id);
-      console.log('   ✓ Старый пользователь удален');
-    } else {
-      console.log('   ℹ️  Старый пользователь не найден');
     }
 
     // Создать новую компанию с правильной кодировкой UTF-8
@@ -83,8 +90,8 @@ const recreateTestUser = async () => {
     });
     console.log('   ✓ Компания создана:', company.fullName);
 
-    // Создать нового пользователя с правильной кодировкой UTF-8
-    console.log('\n👤 Создание тестового пользователя...');
+    // Создать первого пользователя с правильной кодировкой UTF-8
+    console.log('\n👤 Создание первого тестового пользователя...');
     const user = await User.create({
       email: presetUserEmail,
       password: 'SecurePass123!',
@@ -96,17 +103,70 @@ const recreateTestUser = async () => {
     });
     console.log('   ✓ Пользователь создан:', user.firstName, user.lastName);
 
+    // Создать вторую компанию
+    console.log('\n🏢 Создание второй тестовой компании...');
+    const company2 = await Company.create({
+      _id: presetCompanyId2,
+      fullName: 'ООО "Партнер"',
+      shortName: 'Партнер',
+      inn: '9876543210',
+      ogrn: '1089876543210',
+      legalForm: 'ООО',
+      industry: 'Торговля',
+      companySize: '11-50',
+      website: 'https://partner-company.ru',
+      phone: '+7 (495) 987-65-43',
+      email: 'info@partner-company.ru',
+      description: 'Надежный партнер для бизнеса',
+      legalAddress: 'г. Санкт-Петербург, пр. Невский, д. 100',
+      actualAddress: 'г. Санкт-Петербург, пр. Невский, д. 100',
+      foundedYear: 2018,
+      employeeCount: '11-50',
+      revenue: 'До 60 млн ₽',
+      rating: 4.3,
+      reviews: 5,
+      verified: true,
+      partnerGeography: ['spb', 'russia_all'],
+      slogan: 'Качество и надежность',
+    });
+    console.log('   ✓ Компания создана:', company2.fullName);
+
+    // Создать второго пользователя
+    console.log('\n👤 Создание второго тестового пользователя...');
+    const user2 = await User.create({
+      email: presetUserEmail2,
+      password: 'SecurePass123!',
+      firstName: 'Петр',
+      lastName: 'Петров',
+      position: 'Менеджер',
+      phone: '+7 (495) 987-65-43',
+      companyId: company2._id,
+    });
+    console.log('   ✓ Пользователь создан:', user2.firstName, user2.lastName);
+
     // Проверка что данные сохранены правильно
     console.log('\n✅ Проверка данных:');
+    console.log('\n   Пользователь 1:');
     console.log('   Email:', user.email);
     console.log('   Имя:', user.firstName);
     console.log('   Фамилия:', user.lastName);
     console.log('   Компания:', company.fullName);
     console.log('   Должность:', user.position);
+    
+    console.log('\n   Пользователь 2:');
+    console.log('   Email:', user2.email);
+    console.log('   Имя:', user2.firstName);
+    console.log('   Фамилия:', user2.lastName);
+    console.log('   Компания:', company2.fullName);
+    console.log('   Должность:', user2.position);
 
-    console.log('\n✅ ГОТОВО! Тестовый пользователь создан с правильной кодировкой UTF-8');
+    console.log('\n✅ ГОТОВО! Тестовые пользователи созданы с правильной кодировкой UTF-8');
     console.log('\n📋 Данные для входа:');
+    console.log('\n   Пользователь 1:');
     console.log('   Email:  admin@test-company.ru');
+    console.log('   Пароль: SecurePass123!');
+    console.log('\n   Пользователь 2:');
+    console.log('   Email:  manager@partner-company.ru');
     console.log('   Пароль: SecurePass123!');
     console.log('');
 

@@ -17,15 +17,12 @@ import {
   Badge,
   IconButton,
   Flex,
-  Separator,
 } from '@chakra-ui/react'
 import { useTranslation } from 'react-i18next'
 import { FiPlus, FiEdit, FiTrash2, FiExternalLink } from 'react-icons/fi'
 import { useGetProductsQuery, useCreateProductMutation, useUpdateProductMutation, useDeleteProductMutation } from '../../../__data__/api/productsApi'
 import { PRODUCT_CATEGORIES } from '../../../utils/constants'
 import { useToast } from '../../../hooks/useToast'
-import { BuyProductsTab } from './BuyProductsTab'
-import { useAuth } from '../../../hooks/useAuth'
 
 interface ProductFormData {
   name: string
@@ -78,7 +75,6 @@ interface SpecializationTabProps {
 export const SpecializationTab = ({ companyId, isOwnCompany = true }: SpecializationTabProps) => {
   const { t } = useTranslation('company')
   const toast = useToast()
-  const { company } = useAuth()
   const { open, onOpen, onClose } = useDisclosure()
   
   const [editingProduct, setEditingProduct] = useState<any>(null)
@@ -275,14 +271,6 @@ export const SpecializationTab = ({ companyId, isOwnCompany = true }: Specializa
             <Text fontSize="lg">{t('specialization.no_products') || 'Нет товаров'}</Text>
           </Flex>
         )}
-      </VStack>
-
-      {/* Separator */}
-      <Separator />
-
-      {/* Я Покупаю Section */}
-      <VStack gap={6} align="stretch">
-        <BuyProductsTab companyId={companyId} isOwnCompany={isOwnCompany} />
       </VStack>
 
       {/* Add/Edit Product Dialog */}

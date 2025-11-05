@@ -34,9 +34,21 @@ const app = express();
 
 // Подключить MongoDB при инициализации
 let dbConnected = false;
-connectDB().then(() => {
-  dbConnected = true;
-});
+
+// Инициализация подключения к БД
+const initDB = async () => {
+  try {
+    await connectDB();
+    dbConnected = true;
+    console.log('🔌 База данных готова к работе');
+  } catch (error) {
+    console.error('⚠️  Не удалось подключиться к БД:', error.message);
+    console.log('📦 Приложение будет работать с mock данными');
+  }
+};
+
+// Запускаем подключение
+initDB();
 
 // Middleware
 app.use(cors());

@@ -245,23 +245,60 @@ router.post(
         return res.status(400).json({ error: 'At least one recipient is required' });
       }
 
-      if (!subject && productId) {
+      let uploadedFiles = mapFilesToMetadata(req);
+      
+      console.log('========================');
+      console.log('[Requests] Initial uploadedFiles:', uploadedFiles.length);
+      console.log('[Requests] ProductId:', productId);
+      
+      // Если есть productId, получаем данные товара
+      if (productId) {
         try {
           const product = await BuyProduct.findById(productId);
+          console.log('[Requests] Product found:', product ? product.name : 'null');
+          console.log('[Requests] Product files count:', product?.files?.length || 0);
+          if (product && product.files) {
+            console.log('[Requests] Product files:', JSON.stringify(product.files, null, 2));
+          }
+          
           if (product) {
-            subject = product.name;
+            // Берем subject из товара, если не указан
+            if (!subject) {
+              subject = product.name;
+            }
+            
+            // Если файлы не загружены вручную, используем файлы из товара
+            if (uploadedFiles.length === 0 && product.files && product.files.length > 0) {
+              console.log('[Requests] ✅ Copying files from product...');
+              // Копируем файлы из товара, изменяя путь для запроса
+              uploadedFiles = product.files.map(file => ({
+                id: file.id || `file-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: file.name,
+                url: file.url,
+                type: file.type,
+                size: file.size,
+                uploadedAt: file.uploadedAt || new Date(),
+                storagePath: file.storagePath || file.url.replace('/uploads/', ''),
+              }));
+              console.log('[Requests] ✅ Using', uploadedFiles.length, 'files from product:', productId);
+              console.log('[Requests] ✅ Copied files:', JSON.stringify(uploadedFiles, null, 2));
+            } else {
+              console.log('[Requests] ❌ NOT copying files. uploadedFiles.length:', uploadedFiles.length, 'product.files.length:', product.files?.length || 0);
+            }
           }
         } catch (lookupError) {
-          console.error('[Requests] Failed to lookup product for subject:', lookupError.message);
+          console.error('[Requests] ❌ Failed to lookup product:', lookupError.message);
+          console.error(lookupError.stack);
         }
       }
+      
+      console.log('[Requests] Final uploadedFiles for saving:', JSON.stringify(uploadedFiles, null, 2));
+      console.log('========================');
 
       if (!subject) {
         await cleanupUploadedFiles(req);
         return res.status(400).json({ error: 'Subject is required' });
       }
-
-      const uploadedFiles = mapFilesToMetadata(req);
 
       const results = [];
       for (const recipientCompanyId of recipients) {
@@ -321,9 +358,17 @@ router.put(
   async (req, res) => {
     try {
       const { id } = req.params;
+      console.log('[Requests] PUT /requests/:id called with id:', id);
+      console.log('[Requests] Request body:', req.body);
+      console.log('[Requests] Files:', req.files);
+      console.log('[Requests] CompanyId:', req.companyId);
+      
       const responseText = (req.body.response || '').trim();
       const statusRaw = (req.body.status || 'accepted').toLowerCase();
       const status = statusRaw === 'rejected' ? 'rejected' : 'accepted';
+      
+      console.log('[Requests] Response text:', responseText);
+      console.log('[Requests] Status:', status);
 
       if (req.invalidFiles && req.invalidFiles.length > 0) {
         await cleanupUploadedFiles(req);
@@ -351,6 +396,8 @@ router.put(
       }
 
       const uploadedResponseFiles = mapFilesToMetadata(req);
+      console.log('[Requests] Uploaded response files count:', uploadedResponseFiles.length);
+      console.log('[Requests] Uploaded response files:', JSON.stringify(uploadedResponseFiles, null, 2));
 
       if (uploadedResponseFiles.length > 0) {
         await removeStoredFiles(request.responseFiles || []);
@@ -362,17 +409,126 @@ router.put(
       request.respondedAt = new Date();
       request.updatedAt = new Date();
 
-      await request.save();
+      let savedRequest;
+      try {
+        savedRequest = await request.save();
+        log('[Requests] Request responded:', id);
+      } catch (saveError) {
+        console.error('[Requests] Mongoose save failed, trying direct MongoDB update:', saveError.message);
+        // Fallback: использовать MongoDB драйвер напрямую
+        const mongoose = require('mongoose');
+        const updateData = {
+          response: responseText,
+          status: status,
+          respondedAt: new Date(),
+          updatedAt: new Date()
+        };
+        if (uploadedResponseFiles.length > 0) {
+          updateData.responseFiles = uploadedResponseFiles;
+        }
+        
+        const result = await mongoose.connection.collection('requests').findOneAndUpdate(
+          { _id: new mongoose.Types.ObjectId(id) },
+          { $set: updateData },
+          { returnDocument: 'after' }
+        );
+        
+        if (!result) {
+          throw new Error('Failed to update request');
+        }
+        savedRequest = result;
+        log('[Requests] Request responded via direct MongoDB update:', id);
+      }
 
-      log('[Requests] Request responded:', id);
-
-      res.json(request);
+      res.json(savedRequest);
     } catch (error) {
       console.error('[Requests] Error responding to request:', error.message);
+      console.error('[Requests] Error stack:', error.stack);
+      if (error.name === 'ValidationError') {
+        console.error('[Requests] Validation errors:', JSON.stringify(error.errors, null, 2));
+      }
       res.status(500).json({ error: error.message });
     }
   }
 );
+
+// GET /requests/download/:id/:fileId - скачать файл ответа
+router.get('/download/:id/:fileId', verifyToken, async (req, res) => {
+  try {
+    console.log('[Requests] Download request received:', {
+      requestId: req.params.id,
+      fileId: req.params.fileId,
+      userId: req.userId,
+      companyId: req.companyId,
+    });
+
+    const { id, fileId } = req.params;
+    const request = await Request.findById(id);
+
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    // Проверяем, что пользователь имеет доступ к запросу (отправитель или получатель)
+    if (request.senderCompanyId !== req.companyId && request.recipientCompanyId !== req.companyId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    // Ищем файл в responseFiles или в обычных files
+    let file = request.responseFiles?.find((f) => f.id === fileId);
+    if (!file) {
+      file = request.files?.find((f) => f.id === fileId);
+    }
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Создаем абсолютный путь к файлу
+    // Если storagePath не начинается с 'requests/', значит это файл из buy-products
+    let fullPath = file.storagePath;
+    if (!fullPath.startsWith('requests/')) {
+      fullPath = `buy-products/${fullPath}`;
+    }
+    const filePath = path.resolve(__dirname, '..', '..', 'remote-assets', 'uploads', fullPath);
+
+    console.log('[Requests] Trying to download file:', {
+      fileId: file.id,
+      fileName: file.name,
+      storagePath: file.storagePath,
+      absolutePath: filePath,
+      exists: fs.existsSync(filePath),
+    });
+
+    // Проверяем существование файла
+    if (!fs.existsSync(filePath)) {
+      console.error('[Requests] File not found on disk:', filePath);
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+
+    // Устанавливаем правильные заголовки для скачивания с поддержкой кириллицы
+    const encodedFileName = encodeURIComponent(file.name);
+    res.setHeader('Content-Type', file.type || 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodedFileName}`);
+    res.setHeader('Content-Length', file.size);
+
+    // Отправляем файл
+    res.sendFile(filePath, (err) => {
+      if (err) {
+        console.error('[Requests] Error sending file:', err.message);
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Error sending file' });
+        }
+      } else {
+        log('[Requests] File downloaded:', file.name);
+      }
+    });
+  } catch (error) {
+    console.error('[Requests] Error downloading file:', error.message);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+});
 
 // DELETE /requests/:id - удалить запрос
 router.delete('/:id', verifyToken, async (req, res) => {

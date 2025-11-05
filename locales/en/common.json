@@ -142,6 +142,8 @@
     "newRequest": "Send New Request",
     "product": "Select Product",
     "productPlaceholder": "Choose a product",
+    "productRequired": "Select a product",
+    "productFiles": "Product Files",
     "subject": "Purchase Subject",
     "subjectPlaceholder": "Enter purchase subject",
     "subjectRequired": "Specify the purchase subject",

@@ -52,16 +52,30 @@ export const CompanyProfile = () => {
             variant="enclosed"
             orientation="horizontal"
           >
-            <Tabs.List 
-              flexDirection="row"
+            <Box
               overflowX={{ base: 'auto', md: 'visible' }}
-              flexWrap={{ base: 'nowrap', md: 'wrap' }}
-              minW="auto"
-              maxW="none"
-              p={{ base: 2, md: 0 }}
-              bg={colors.bg.secondary}
-              borderRadius={{ base: 'md', md: 'none' }}
+              overflowY="hidden"
+              width="100%"
+              css={{
+                '@media (max-width: 768px)': {
+                  WebkitOverflowScrolling: 'touch',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  '&::-webkit-scrollbar': {
+                    display: 'none'
+                  }
+                }
+              }}
             >
+              <Tabs.List 
+                flexDirection="row"
+                flexWrap={{ base: 'nowrap', md: 'wrap' }}
+                width={{ base: 'max-content', md: 'auto' }}
+                minW={{ base: '100%', md: 'auto' }}
+                p={{ base: 2, md: 0 }}
+                bg={colors.bg.secondary}
+                borderRadius={{ base: 'md', md: 'none' }}
+              >
               <Tabs.Trigger 
                 value="about"
                 whiteSpace="nowrap"
@@ -201,6 +215,7 @@ export const CompanyProfile = () => {
                 {t('tabs.reviews')}
               </Tabs.Trigger>
             </Tabs.List>
+            </Box>
 
             <Box flex="1" p={{ base: 4, md: 6 }}>
               <Tabs.Content value="about">

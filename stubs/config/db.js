@@ -19,13 +19,12 @@ const isAuthError = (error) => {
 
 const connectWithUri = async (uri, label) => {
   console.log(`\n📡 Попытка подключения к MongoDB (${label})...`);
-  console.log(`   URI: ${uri}`);
+  console.log(`   URI: ${uri.replace(/\/\/([^:]+):([^@]+)@/, '//$1:****@')}`);
 
   const connection = await mongoose.connect(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-    serverSelectionTimeoutMS: 5000,
-    connectTimeoutMS: 5000,
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
   });
 
   try {
